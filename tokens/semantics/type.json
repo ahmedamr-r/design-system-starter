@@ -1,0 +1,17 @@
+{
+  "type": {
+    "family": { "$type": "fontFamily", "$value": "{font.family.sans}", "$description": "Every piece of text." },
+    "title": {
+      "size": { "$type": "dimension", "$value": "{font.size.500}", "$description": "Card and section titles." },
+      "weight": { "$type": "fontWeight", "$value": "{font.weight.semibold}" }
+    },
+    "body": {
+      "size": { "$type": "dimension", "$value": "{font.size.300}", "$description": "Paragraphs and most text." },
+      "weight": { "$type": "fontWeight", "$value": "{font.weight.regular}" }
+    },
+    "label": {
+      "size": { "$type": "dimension", "$value": "{font.size.200}", "$description": "Buttons, tags and small labels." },
+      "weight": { "$type": "fontWeight", "$value": "{font.weight.medium}" }
+    }
+  }
+}

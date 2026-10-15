@@ -1,0 +1,25 @@
+{
+  "color": {
+    "$type": "color",
+    "surface": {
+      "page": { "$value": "{color.gray.50}", "$description": "The page behind everything." },
+      "default": { "$value": "{color.gray.0}", "$description": "Cards, panels and anything that sits on the page." }
+    },
+    "fill": {
+      "brand": { "$value": "{color.gray.900}", "$description": "The main button: the one thing to press first." },
+      "brand-hover": { "$value": "{color.gray.950}", "$description": "The main button under the pointer." },
+      "brand-subtle": { "$value": "{color.gray.100}", "$description": "Tags and soft highlights in the brand colour." }
+    },
+    "text": {
+      "default": { "$value": "{color.gray.900}", "$description": "Titles and body text." },
+      "subtle": { "$value": "{color.gray.600}", "$description": "Secondary text: captions, meta, hints." },
+      "on-fill": { "$value": "{color.gray.0}", "$description": "Text on a brand fill." },
+      "brand": { "$value": "{color.gray.900}", "$description": "Text on a subtle brand fill." },
+      "link": { "$value": "{color.gray.900}", "$description": "Links inside text." }
+    },
+    "border": {
+      "default": { "$value": "{color.gray.200}", "$description": "Card edges and dividers." },
+      "focus": { "$value": "{color.gray.900}", "$description": "The keyboard focus ring." }
+    }
+  }
+}

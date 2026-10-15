@@ -1,0 +1,8 @@
+{
+  "radius": {
+    "$type": "dimension",
+    "control": { "$value": "{size.200}", "$description": "Buttons, inputs and tags." },
+    "surface": { "$value": "{size.300}", "$description": "Cards and panels." },
+    "pill": { "$value": "{size.full}", "$description": "Fully rounded ends, for anything that asks for a pill." }
+  }
+}
