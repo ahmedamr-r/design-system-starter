@@ -1,0 +1,21 @@
+# Runs the build and the checks on every pull request, and on every push to
+# main. With a ruleset on main that requires this check, a pull request can
+# only be merged once it passes.
+name: Check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci
+      - run: npm run build
+      - run: npm run check
