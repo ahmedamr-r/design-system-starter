@@ -1,0 +1,16 @@
+{
+  "size": {
+    "$type": "dimension",
+    "$description": "The spacing and radius scale, in px. Steps are named by multiples of 4px, so 100 is 4px and 400 is 16px.",
+    "0": { "$value": { "value": 0, "unit": "px" } },
+    "50": { "$value": { "value": 2, "unit": "px" } },
+    "100": { "$value": { "value": 4, "unit": "px" } },
+    "150": { "$value": { "value": 6, "unit": "px" } },
+    "200": { "$value": { "value": 8, "unit": "px" } },
+    "300": { "$value": { "value": 12, "unit": "px" } },
+    "400": { "$value": { "value": 16, "unit": "px" } },
+    "600": { "$value": { "value": 24, "unit": "px" } },
+    "800": { "$value": { "value": 32, "unit": "px" } },
+    "full": { "$value": { "value": 9999, "unit": "px" }, "$description": "Large enough to round any corner into a pill." }
+  }
+}

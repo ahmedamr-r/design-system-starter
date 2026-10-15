@@ -1,0 +1,23 @@
+{
+  "font": {
+    "family": {
+      "sans": {
+        "$type": "fontFamily",
+        "$value": ["system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"]
+      }
+    },
+    "size": {
+      "$type": "dimension",
+      "200": { "$value": { "value": 14, "unit": "px" } },
+      "300": { "$value": { "value": 16, "unit": "px" } },
+      "400": { "$value": { "value": 20, "unit": "px" } },
+      "500": { "$value": { "value": 24, "unit": "px" } }
+    },
+    "weight": {
+      "$type": "fontWeight",
+      "regular": { "$value": 400 },
+      "medium": { "$value": 500 },
+      "semibold": { "$value": 600 }
+    }
+  }
+}
