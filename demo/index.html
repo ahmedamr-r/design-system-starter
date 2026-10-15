@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Token demo</title>
+    <link rel="stylesheet" href="../dist/tokens.css" />
+    <link rel="stylesheet" href="demo.css" />
+  </head>
+  <body>
+    <main class="panels">
+      <section class="panel" data-brand="harbor" aria-labelledby="harbor-label">
+        <h2 class="panel-label" id="harbor-label">Harbor</h2>
+        <article class="card">
+          <header class="card-head">
+            <h3 class="plan">Studio</h3>
+            <span class="tag">Most popular</span>
+          </header>
+          <p class="lede">For small teams that ship every week.</p>
+          <p class="price"><span class="amount">$24</span> per seat, per month</p>
+          <ul class="features">
+            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Unlimited projects and reviewers</li>
+            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>A shared component library</li>
+            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Review links with comments</li>
+          </ul>
+          <button class="button" type="button">Start a 14-day trial</button>
+          <a class="link" href="#">Compare plans</a>
+        </article>
+      </section>
+
+      <section class="panel" data-brand="grove" aria-labelledby="grove-label">
+        <h2 class="panel-label" id="grove-label">Grove</h2>
+        <article class="card">
+          <header class="card-head">
+            <h3 class="plan">Studio</h3>
+            <span class="tag">Most popular</span>
+          </header>
+          <p class="lede">For small teams that ship every week.</p>
+          <p class="price"><span class="amount">$24</span> per seat, per month</p>
+          <ul class="features">
+            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Unlimited projects and reviewers</li>
+            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>A shared component library</li>
+            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Review links with comments</li>
+          </ul>
+          <button class="button" type="button">Start a 14-day trial</button>
+          <a class="link" href="#">Compare plans</a>
+        </article>
+      </section>
+
+      <!-- The cascade test: a Grove card inside a Harbor panel must come out green. -->
+      <section class="panel" data-brand="harbor" aria-labelledby="nested-label">
+        <h2 class="panel-label" id="nested-label">Grove inside Harbor</h2>
+        <a class="link" href="#">A Harbor link, for comparison</a>
+        <article class="card" data-brand="grove">
+          <header class="card-head">
+            <h3 class="plan">Studio</h3>
+            <span class="tag">Most popular</span>
+          </header>
+          <p class="lede">For small teams that ship every week.</p>
+          <p class="price"><span class="amount">$24</span> per seat, per month</p>
+          <ul class="features">
+            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Unlimited projects and reviewers</li>
+            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>A shared component library</li>
+            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Review links with comments</li>
+          </ul>
+          <button class="button" type="button">Start a 14-day trial</button>
+          <a class="link" href="#">Compare plans</a>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

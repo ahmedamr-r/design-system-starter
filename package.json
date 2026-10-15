@@ -10,9 +10,11 @@
   },
   "scripts": {
     "build": "node scripts/build.js",
-    "check": "node scripts/check.js"
+    "check": "node scripts/check.js",
+    "demo": "npm run build && vite --open /demo/"
   },
   "devDependencies": {
-    "style-dictionary": "^5.6.1"
+    "style-dictionary": "^5.6.1",
+    "vite": "^8.3.4"
   }
 }
