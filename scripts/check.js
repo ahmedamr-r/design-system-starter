@@ -32,11 +32,14 @@ function tokensIn(file) {
 const layer = (name) => jsonFiles(join('tokens', name)).flatMap(tokensIn);
 const primitives = layer('primitives');
 const semantics = layer('semantics');
+const components = layer('components');
 const brands = layer('brands');
 
 const names = (tokens) => new Set(tokens.map((token) => token.path));
 const primitiveNames = names(primitives);
 const semanticNames = names(semantics);
+const componentNames = names(components);
+const layeredNames = new Set([...semanticNames, ...componentNames]);
 
 const cssName = (path) => `--${path.replaceAll('.', '-')}`;
 const referenceIn = (value) => (typeof value === 'string' ? value.match(/^\{([^}]+)\}$/)?.[1] : undefined);
@@ -66,7 +69,7 @@ const demoCss = existsSync('demo')
   : [];
 
 check('Colour values appear only in tokens/primitives', [
-  ...[...semantics, ...brands]
+  ...[...semantics, ...components, ...brands]
     .filter(({ value }) =>
       typeof value === 'object' ? 'colorSpace' in value : COLOUR_LITERAL.test(String(value)),
     )
@@ -80,13 +83,23 @@ check('Colour values appear only in tokens/primitives', [
   ),
 ]);
 
-// 2. Semantics and brands point at primitives, never at raw values or at each other.
-check('Semantic and brand tokens point at primitives only', [...semantics, ...brands].flatMap(({ path, value, file }) => {
-  const target = referenceIn(value);
-  if (!target) return [`${file}: ${path} holds a value. Semantics and brands only point at primitives.`];
-  if (!primitiveNames.has(target)) return [`${file}: ${path} points at {${target}}, which is not a primitive.`];
+// 2. Every token points one layer down: semantics at primitives, components at
+//    semantics. A brand follows the rule of the token it re-points.
+const pointsDown = (token, below, belowName) => {
+  const target = referenceIn(token.value);
+  if (!target) return [`${token.file}: ${token.path} holds a value. It should point at a ${belowName} token.`];
+  if (!below.has(target)) return [`${token.file}: ${token.path} points at {${target}}, which is not a ${belowName} token.`];
   return [];
-}));
+};
+check('Every token points one layer down', [
+  ...semantics.flatMap((token) => pointsDown(token, primitiveNames, 'primitive')),
+  ...components.flatMap((token) => pointsDown(token, semanticNames, 'semantic')),
+  ...brands.flatMap((token) =>
+    componentNames.has(token.path)
+      ? pointsDown(token, semanticNames, 'semantic')
+      : pointsDown(token, primitiveNames, 'primitive'),
+  ),
+]);
 
 // 3. The demo reads semantic tokens, never primitives.
 const primitiveCss = new Set([...primitiveNames].map(cssName));
@@ -96,7 +109,7 @@ check('Demo CSS reads no primitives', demoCss.flatMap(({ file, text }) =>
     .map(([, name]) => `${file} reads ${name}, a primitive. Use the semantic token for that job.`),
 ));
 
-// 4. A brand file only re-points semantics that exist.
+// 4. A brand file only re-points tokens that exist.
 function closest(word, options) {
   const distance = (a, b) => {
     const row = Array.from({ length: b.length + 1 }, (_, i) => i);
@@ -113,9 +126,9 @@ function closest(word, options) {
   };
   return [...options].sort((a, b) => distance(word, a) - distance(word, b))[0];
 }
-check('Brand files only set semantic tokens that exist', brands
-  .filter(({ path }) => !semanticNames.has(path))
-  .map(({ path, file }) => `${file}: ${path} is not a semantic token. Did you mean ${closest(path, semanticNames)}?`));
+check('Brand files only set tokens that exist', brands
+  .filter(({ path }) => !layeredNames.has(path))
+  .map(({ path, file }) => `${file}: ${path} is not a semantic or component token. Did you mean ${closest(path, layeredNames)}?`));
 
 // 5 and 6 read the built CSS.
 if (!existsSync('dist/tokens.css')) {
@@ -129,27 +142,27 @@ const blocks = [...readFileSync('dist/tokens.css', 'utf8')
     selector: selector.trim(),
     declarations: [...body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map(([, name, value]) => ({ name, value: value.trim() })),
   }));
-const semanticCss = new Set([...semanticNames].map(cssName));
+const semanticCss = new Set([...layeredNames].map(cssName));
 const isBrandBlock = (selector) => /\[data-brand="/.test(selector);
 const builtSemantics = blocks.flatMap(({ selector, declarations }) =>
   declarations.filter(({ name }) => semanticCss.has(name)).map((declaration) => ({ ...declaration, selector })),
 );
 
-// 5. In the built CSS, every semantic is still a reference.
-check('Every semantic in dist/tokens.css is a var() reference', builtSemantics
+// 5. In the built CSS, every semantic and component token is still a reference.
+check('Every semantic and component token in dist/tokens.css is a var() reference', builtSemantics
   .filter(({ value }) => !value.startsWith('var('))
   .map(({ name, value, selector }) => `${name} is baked to ${value} under ${selector}. A brand that re-points what it reads will not reach it.`));
 
-// 6. Semantics are declared on every brand scope, before the brand blocks.
+// 6. Semantics and component tokens are declared on every brand scope, before the brands.
 const firstBrand = blocks.findIndex(({ selector }) => isBrandBlock(selector));
 const lastBase = blocks.findLastIndex(({ selector, declarations }) =>
   !isBrandBlock(selector) && declarations.some(({ name }) => semanticCss.has(name)));
-check('Semantics are declared on :root and [data-brand], before the brands', [
+check('Semantic and component tokens are declared on :root and [data-brand], before the brands', [
   ...builtSemantics
     .filter(({ selector }) => !isBrandBlock(selector))
     .filter(({ selector }) => !selector.split(',').some((part) => part.trim() === '[data-brand]'))
     .map(({ name, selector }) => `${name} is declared under "${selector}" only. Anything that reads it inside a data-brand would keep the page's value.`),
-  ...(firstBrand !== -1 && lastBase > firstBrand ? ['A brand block comes before the semantics, so the semantics would undo it.'] : []),
+  ...(firstBrand !== -1 && lastBase > firstBrand ? ['A brand block comes before the tokens it re-points, so they would undo it.'] : []),
 ]);
 
 if (failed > 0) {

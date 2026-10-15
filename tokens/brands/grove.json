@@ -13,5 +13,8 @@
     "border": {
       "focus": { "$value": "{color.green.600}" }
     }
+  },
+  "button": {
+    "radius": { "$type": "dimension", "$value": "{radius.pill}" }
   }
 }

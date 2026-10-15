@@ -1,7 +1,9 @@
 // Builds dist/tokens.css in layers, one block each:
 //   1. primitives on :root, as plain values;
 //   2. semantics on :root and on [data-brand], as var() references to primitives;
-//   3. one block per brand, [data-brand="<name>"], re-pointing some semantics.
+//   3. component tokens, the same way, as references to semantics;
+//   4. one block per brand, [data-brand="<name>"], re-pointing some semantics
+//      (and, for a component a brand restyles on its own, component tokens).
 // Keeping the references means a brand can re-point one semantic and everything
 // that reads it follows. Declaring semantics on [data-brand] as well makes a
 // brand set on any element re-resolve them right there, instead of inheriting
@@ -13,7 +15,7 @@ import StyleDictionary from 'style-dictionary';
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 
 const PARTS = 'dist/.parts/';
-const BASE = ['tokens/primitives/**/*.json', 'tokens/semantics/**/*.json'];
+const BASE = ['tokens/primitives/**/*.json', 'tokens/semantics/**/*.json', 'tokens/components/**/*.json'];
 const inLayer = (layer) => (token) => token.filePath.startsWith(`tokens/${layer}/`);
 
 // Semantics and brands point at tokens that sit in another block, which
@@ -35,6 +37,12 @@ const base = new StyleDictionary({
       destination: 'semantics.css',
       format: 'css/variables',
       filter: inLayer('semantics'),
+      options: { outputReferences: true, selector: ':root, [data-brand]' },
+    },
+    {
+      destination: 'components.css',
+      format: 'css/variables',
+      filter: inLayer('components'),
       options: { outputReferences: true, selector: ':root, [data-brand]' },
     },
   ]),
@@ -63,7 +71,7 @@ for (const brand of brands) {
   await sd.buildAllPlatforms();
 }
 
-const order = ['primitives.css', 'semantics.css', ...brands.map((b) => `brand-${b}.css`)];
+const order = ['primitives.css', 'semantics.css', 'components.css', ...brands.map((b) => `brand-${b}.css`)];
 const blocks = await Promise.all(order.map((file) => readFile(PARTS + file, 'utf8')));
 await mkdir('dist', { recursive: true });
 await writeFile(

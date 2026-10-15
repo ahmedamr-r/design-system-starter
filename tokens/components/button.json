@@ -1,0 +1,8 @@
+{
+  "button": {
+    "background": { "$type": "color", "$value": "{color.fill.brand}", "$description": "The button's fill." },
+    "background-hover": { "$type": "color", "$value": "{color.fill.brand-hover}", "$description": "The button's fill under the pointer." },
+    "label": { "$type": "color", "$value": "{color.text.on-fill}", "$description": "The button's text." },
+    "radius": { "$type": "dimension", "$value": "{radius.control}", "$description": "The button's corners." }
+  }
+}

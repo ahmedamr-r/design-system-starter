@@ -22,9 +22,10 @@ This is a design token library. Token files are JSON in the W3C Design Tokens fo
 
 1. **Primitives** (`tokens/primitives/`) hold raw values: colours, sizes, fonts. Named for what they are (`color.blue.600`), never for where they are used.
 2. **Semantics** (`tokens/semantics/`) name a job (`color.fill.brand`) and point at one primitive. They never hold a raw value.
-3. **Brands** (`tokens/brands/<name>.json`) re-point semantics at different primitives. A brand adds no new tokens.
+3. **Components** (`tokens/components/<component>.json`) exist only for a component a brand restyles on its own, such as pill-shaped buttons in one brand. Each points at a semantic. Today that is Button alone.
+4. **Brands** (`tokens/brands/<name>.json`) re-point semantics at different primitives, and component tokens at different semantics. A brand adds no new tokens.
 
-Components and pages read semantics only. Never a primitive, never a raw value.
+Pages and components read semantics, or their own component tokens where those exist. Never a primitive, never a raw value. Before adding a component file, check whether a new semantic would do: a role every component can use beats a token only one can.
 
 ## Naming semantic colours
 

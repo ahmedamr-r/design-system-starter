@@ -1,4 +1,4 @@
-/* Reads semantic tokens only. npm run check fails if a primitive or a raw colour shows up here. */
+/* Reads semantic tokens, and the button reads its own component tokens. npm run check fails if a primitive or a raw colour shows up here. */
 
 body {
   margin: 0;
@@ -118,9 +118,9 @@ body {
   margin-top: var(--space-control-y);
   padding: var(--space-control-y) var(--space-control-x);
   border: 0;
-  border-radius: var(--radius-control);
-  background: var(--color-fill-brand);
-  color: var(--color-text-on-fill);
+  border-radius: var(--button-radius);
+  background: var(--button-background);
+  color: var(--button-label);
   font: inherit;
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
@@ -129,7 +129,7 @@ body {
 }
 
 .button:hover {
-  background: var(--color-fill-brand-hover);
+  background: var(--button-background-hover);
 }
 
 .link {
