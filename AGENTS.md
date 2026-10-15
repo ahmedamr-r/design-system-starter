@@ -15,3 +15,27 @@ This is a design token library. Token files are JSON in the W3C Design Tokens fo
 - `tokens/primitives/`, `tokens/semantics/` and `tokens/components/` are the token layers.
 - `tokens/brands/`, `tokens/modes/` and `tokens/locales/` are the switches. Each holds one file per option, and each file re-points tokens that already exist. The README in each folder says which attribute picks its files.
 - `scripts/build.js` writes `dist/tokens.css`, and `scripts/check.js` checks the rules. A change to how either works is its own job.
+
+## What each layer may point at
+
+`npm run check` enforces everything from here down.
+
+1. **Primitives** (`tokens/primitives/`) hold raw values: colours, sizes, fonts. Named for what they are (`color.blue.600`), never for where they are used.
+2. **Semantics** (`tokens/semantics/`) name a job (`color.fill.brand`) and point at one primitive. They never hold a raw value.
+3. **Brands** (`tokens/brands/<name>.json`) re-point semantics at different primitives. A brand adds no new tokens.
+
+Components and pages read semantics only. Never a primitive, never a raw value.
+
+## Naming semantic colours
+
+`color.<role>.<intent>[-<state>]`
+
+- Roles: `surface`, `fill`, `text`, `border`.
+- Intent says what it is for: `default`, `subtle`, `brand`, `on-fill`, `link`, `focus`.
+- States come last: `-hover`, `-subtle`.
+
+Name the job, not the colour. `color.fill.brand`, never `color.fill.blue`.
+
+## Brands
+
+A brand is one file in `tokens/brands/`. The build finds it there. Never add a brand name to any script, list or config.
