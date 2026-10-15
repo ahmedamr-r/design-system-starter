@@ -1,0 +1,1 @@
+Create a public GitHub repository called design-system-starter with the GitHub CLI, connect this folder to it, and push the main branch. Explain each command in one sentence before you run it. If I'm not signed in to the GitHub CLI, tell me the one command to sign in and stop.

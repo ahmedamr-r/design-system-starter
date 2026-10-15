@@ -1,0 +1,1 @@
+Add a GitHub Actions workflow that runs npm ci, npm run build and npm run check on every pull request and on every push to main, using the Node version in .nvmrc. Then tell me how to set up the repository so a pull request can't be merged until this check passes.
