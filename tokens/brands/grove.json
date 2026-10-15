@@ -1,0 +1,17 @@
+{
+  "color": {
+    "$type": "color",
+    "fill": {
+      "brand": { "$value": "{color.green.600}" },
+      "brand-hover": { "$value": "{color.green.700}" },
+      "brand-subtle": { "$value": "{color.green.50}" }
+    },
+    "text": {
+      "brand": { "$value": "{color.green.700}" },
+      "link": { "$value": "{color.green.600}" }
+    },
+    "border": {
+      "focus": { "$value": "{color.green.600}" }
+    }
+  }
+}
