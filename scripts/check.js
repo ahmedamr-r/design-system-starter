@@ -1,9 +1,11 @@
 // Checks the token rules that are easy to break and hard to see.
 // Run it after `npm run build`; it reads the token files, the demo's CSS and
-// HTML, dist/tokens.css, and the scripts, workflows and config files that must
-// not name a brand. It prints one line per check, and exits with an error if any fail.
+// HTML, dist/tokens.css, tokens/contrast-pairs.json, and the scripts, workflows
+// and config files that must not name a brand. It prints one line per check,
+// and exits with an error if any fail.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { resolver } from './lib/resolve.js';
 
 // ---------------------------------------------------------------- reading
 
@@ -48,16 +50,18 @@ const referenceIn = (value) => (typeof value === 'string' ? value.match(/^\{([^}
 
 // ---------------------------------------------------------------- reporting
 
+// A check prints its first five problems, or every one with { all: true }.
 let failed = 0;
-function check(title, problems) {
+function check(title, problems, { all = false } = {}) {
   if (problems.length === 0) {
     console.log(`✔ ${title}`);
     return;
   }
   failed += 1;
   console.log(`✖ ${title}`);
-  for (const problem of problems.slice(0, 5)) console.log(`    ${problem}`);
-  if (problems.length > 5) console.log(`    …and ${problems.length - 5} more like these.`);
+  const shown = all ? problems : problems.slice(0, 5);
+  for (const problem of shown) console.log(`    ${problem}`);
+  if (problems.length > shown.length) console.log(`    …and ${problems.length - shown.length} more like these.`);
 }
 
 // ---------------------------------------------------------------- the checks
@@ -294,6 +298,112 @@ check('The demo reads only variables the build writes', demoFiles.flatMap(({ fil
       .filter(([, name]) => !written.has(name))
       .map(([, name]) => `${file}:${i + 1} reads ${name}, which dist/tokens.css does not write. Did you mean ${closest(name, readable)}?`)),
 ));
+
+// 13 and 14 read tokens/contrast-pairs.json: each text and focus colour, the
+// surfaces and fills the demo puts it on, and the ratio it must reach there.
+// Both colours of a pair are worked out from dist/tokens.css by
+// scripts/lib/resolve.js, as the browser would, for every brand and for no
+// brand, in light and in dark. Both checks print every problem they find.
+const PAIRS = join('tokens', 'contrast-pairs.json');
+const colourOf = resolver(readFileSync('dist/tokens.css', 'utf8'));
+const contexts = [null, ...[...brandNames].sort()].flatMap((brand) =>
+  ['light', 'dark'].map((mode) => ({ brand, mode })));
+const contextName = ({ brand, mode }) => `${brand ?? 'no brand'}, ${mode}`;
+
+// The pairs, as { foreground, background, ratio }, and anything wrong with the file.
+const pairProblems = [];
+const pairs = [];
+let pairFile = {};
+if (!existsSync(PAIRS)) {
+  pairProblems.push(`${PAIRS} is missing. List each text and focus colour there, with the surfaces and fills it sits on and the ratio it must reach.`);
+} else {
+  try {
+    pairFile = JSON.parse(readFileSync(PAIRS, 'utf8'));
+  } catch (error) {
+    pairProblems.push(`${PAIRS} is not valid JSON: ${error.message}`);
+  }
+}
+for (const [foreground, entry] of Object.entries(pairFile)) {
+  if (foreground.startsWith('$')) continue;
+  if (!layeredNames.has(foreground)) {
+    pairProblems.push(`${PAIRS}: ${foreground} is not a semantic or component token. Did you mean ${closest(foreground, layeredNames)}?`);
+    continue;
+  }
+  const { ratio, on } = entry ?? {};
+  if (typeof ratio !== 'number' || ratio < 1 || ratio > 21) {
+    pairProblems.push(`${PAIRS}: ${foreground} needs a ratio between 1 and 21, such as 4.5 for text or 3 for a focus ring.`);
+    continue;
+  }
+  if (!Array.isArray(on) || on.length === 0) {
+    pairProblems.push(`${PAIRS}: ${foreground} needs "on", the list of surfaces and fills it sits on.`);
+    continue;
+  }
+  for (const background of on) {
+    if (layeredNames.has(background)) pairs.push({ foreground, background, ratio });
+    else pairProblems.push(`${PAIRS}: ${foreground} sits on ${background}, which is not a semantic or component token. Did you mean ${closest(String(background), layeredNames)}?`);
+  }
+}
+
+// WCAG 2 contrast: the relative luminance of each sRGB hex colour, then
+// (lighter + 0.05) / (darker + 0.05), from 1:1 to 21:1. The ratio is compared
+// as it is, never rounded, so 4.499:1 falls short of 4.5:1.
+const luminance = (hex) => {
+  const [r, g, b] = [1, 3, 5]
+    .map((at) => parseInt(hex.slice(at, at + 2), 16) / 255)
+    .map((channel) => (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const contrast = (one, other) => {
+  const [lighter, darker] = [luminance(one), luminance(other)].sort((a, b) => b - a);
+  return (lighter + 0.05) / (darker + 0.05);
+};
+// Shown cut to two decimals, so a ratio just short of the bar never prints as reaching it.
+const twoPlaces = (ratio) => (Math.floor(ratio * 100) / 100).toFixed(2);
+
+// Every pair in every brand and mode. covered collects each token a
+// foreground passes through, so button.label also covers color.text.on-fill.
+const measured = [];
+const covered = new Set();
+const unresolved = [];
+for (const context of contexts) {
+  for (const { foreground, background, ratio } of pairs) {
+    try {
+      const front = colourOf(foreground, context);
+      for (const name of front.chain) covered.add(name);
+      const back = colourOf(background, context);
+      measured.push({ foreground, background, ratio, context, front: front.hex, back: back.hex, reached: contrast(front.hex, back.hex) });
+    } catch (error) {
+      unresolved.push(`${PAIRS}: ${foreground} on ${background} cannot be worked out for ${contextName(context)}. ${error.message}`);
+    }
+  }
+}
+
+// 13. Every text and focus colour has a pair. They are the color.text and
+//     color.border.focus semantics, and any component token that points at
+//     one of them, such as button.label.
+const TEXT_OR_FOCUS = /^color\.(?:text\.|border\.focus(?:-|$))/;
+const textOrFocusSemantics = new Set(colourSemantics.map(({ path }) => path).filter((path) => TEXT_OR_FOCUS.test(path)));
+const textOrFocus = [
+  ...textOrFocusSemantics,
+  ...components.filter(({ value }) => textOrFocusSemantics.has(referenceIn(value))).map(({ path }) => path),
+];
+check(`Every text and focus colour has a pair in ${PAIRS}`, [
+  ...pairProblems,
+  ...textOrFocus
+    .filter((path) => !covered.has(cssName(path)))
+    .map((path) => `${PAIRS} has no pair for ${path}. Add it with each surface or fill the demo puts it on, and the ratio it must reach: 4.5 for text, 3 for a focus ring.`),
+  ...unresolved,
+], { all: true });
+
+// 14. Every pair reaches its ratio, for every brand and for no brand, in light and in dark.
+const shortfalls = measured.filter(({ reached, ratio }) => reached < ratio);
+check(
+  `Every pair in ${PAIRS} reaches its ratio, for each brand and no brand, in light and dark` +
+    (shortfalls.length > 0 ? ` (${shortfalls.length} of ${measured.length} fall short)` : ''),
+  shortfalls.map(({ foreground, background, ratio, context, front, back, reached }) =>
+    `${contextName(context)}: ${foreground} on ${background} is ${twoPlaces(reached)}:1, needs ${ratio}:1 (${front} on ${back})`),
+  { all: true },
+);
 
 if (failed > 0) {
   console.log(`\n${failed} check${failed === 1 ? '' : 's'} failed.`);

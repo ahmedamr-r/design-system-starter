@@ -1,0 +1,33 @@
+{
+  "$description": "Every text and focus-ring colour, each surface or fill the demo puts it on, and the contrast ratio it must reach there: 4.5 for text, 3 for the focus ring. npm run check measures each pair for every brand and for no brand, in light and in dark. Card borders and dividers are decorative and left out. The button is listed by its own tokens, the ones the demo reads, which also covers color.text.on-fill.",
+  "color.text.default": {
+    "ratio": 4.5,
+    "on": ["color.surface.page", "color.surface.default"],
+    "$description": "Page and panel text on the page; titles, the price and the feature list on a card."
+  },
+  "color.text.subtle": {
+    "ratio": 4.5,
+    "on": ["color.surface.page", "color.surface.default"],
+    "$description": "Panel labels on the page; the lede and the price line on a card."
+  },
+  "color.text.brand": {
+    "ratio": 4.5,
+    "on": ["color.fill.brand-subtle"],
+    "$description": "The tag's text and the feature list's ticks."
+  },
+  "color.text.link": {
+    "ratio": 4.5,
+    "on": ["color.surface.page", "color.surface.default"],
+    "$description": "A link beside a card on the page, and the link inside a card."
+  },
+  "button.label": {
+    "ratio": 4.5,
+    "on": ["button.background", "button.background-hover"],
+    "$description": "The button's text, at rest and under the pointer."
+  },
+  "color.border.focus": {
+    "ratio": 3,
+    "on": ["color.surface.page", "color.surface.default"],
+    "$description": "The ring sits 2px outside the link or button it marks, so it is drawn on the card or the page, not on the button's fill."
+  }
+}
