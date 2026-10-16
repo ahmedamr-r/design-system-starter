@@ -4,7 +4,7 @@ A design token library built one prompt at a time with a coding agent. It goes w
 
 ## Run it
 
-Needs Node 22 or later.
+Needs Node 24 or later.
 
 ```bash
 npm install
