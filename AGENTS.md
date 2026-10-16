@@ -18,7 +18,7 @@ This is a design token library. Token files are JSON in the W3C Design Tokens fo
 
 ## What each layer may point at
 
-`npm run check` enforces everything from here down.
+`npm run check` enforces part of the rules from here down. The last section says exactly which parts.
 
 1. **Primitives** (`tokens/primitives/`) hold raw values: colours, sizes, fonts. Named for what they are (`color.blue.600`), never for where they are used.
 2. **Semantics** (`tokens/semantics/`) name a job (`color.fill.brand`) and point at one primitive. They never hold a raw value.
@@ -32,11 +32,26 @@ Pages and components read semantics, or their own component tokens where those e
 `color.<role>.<intent>[-<state>]`
 
 - Roles: `surface`, `fill`, `text`, `border`.
-- Intent says what it is for: `default`, `subtle`, `brand`, `on-fill`, `link`, `focus`.
-- States come last: `-hover`, `-subtle`.
+- Intent is any name for a job, such as `default`, `subtle`, `brand`, `on-fill`, `link`, `focus`.
+- A state is optional and comes last, such as `-hover` or `-subtle`.
 
 Name the job, not the colour. `color.fill.brand`, never `color.fill.blue`.
 
 ## Brands
 
 A brand is one file in `tokens/brands/`. The build finds it there. Never add a brand name to any script, list or config.
+
+## What `npm run check` enforces
+
+Each check fails with a plain message that names the file. They are numbered as in `scripts/check.js`.
+
+1. Colour values appear only in `tokens/primitives/`. No semantic, component or brand token holds one, and no CSS file in `demo/` does.
+2. Every semantic points at a primitive, and every component token at a semantic. A brand token points at what the token it re-points would.
+3. The CSS in `demo/` reads no primitive.
+4. A brand file sets only semantic and component tokens that already exist.
+5. In `dist/tokens.css`, every semantic and component token is still a `var()` reference.
+6. In `dist/tokens.css`, semantic and component tokens are declared on `:root` and `[data-brand]`, before the brand blocks.
+7. Every semantic colour is named `color.<role>.<intent>`, with an optional `-<state>`, and its role is `surface`, `fill`, `text` or `border`. No word in the name is a ramp from `tokens/primitives/color.json`, and grey and gray count as the same word.
+8. No file in `scripts/` or `.github/`, and no config file at the root, contains a brand name as a whole word, in any letter case. The brand names are the file names in `tokens/brands/`. Root config files are dotfiles and `.json`, `.js`, `.mjs`, `.cjs`, `.ts`, `.yml`, `.yaml` and `.toml` files, except `package-lock.json`.
+
+Nothing checks the rest, so keep it by hand: that primitives are named for what they are, that a component file exists only when a brand restyles that component and a semantic would not do, that pages use no raw sizes or fonts (check 1 catches only colours), and that brand names stay out of any other list or config.

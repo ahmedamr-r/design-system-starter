@@ -1,7 +1,8 @@
 // Checks the token rules that are easy to break and hard to see.
-// Run it after `npm run build`; it reads the token files, the demo CSS and
-// dist/tokens.css, prints one line per check, and exits with an error if any fail.
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+// Run it after `npm run build`; it reads the token files, the demo CSS,
+// dist/tokens.css, and the scripts, workflows and config files that must not
+// name a brand. It prints one line per check, and exits with an error if any fail.
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 // ---------------------------------------------------------------- reading
@@ -164,6 +165,69 @@ check('Semantic and component tokens are declared on :root and [data-brand], bef
     .map(({ name, selector }) => `${name} is declared under "${selector}" only. Anything that reads it inside a data-brand would keep the page's value.`),
   ...(firstBrand !== -1 && lastBase > firstBrand ? ['A brand block comes before the tokens it re-points, so they would undo it.'] : []),
 ]);
+
+// 7. A semantic colour is named color.<role>.<intent>, with an optional -state
+//    at the end, and names a job, not a colour. The colour words are the ramps
+//    in tokens/primitives/color.json, so a new ramp is covered once it is added.
+//    Grey and gray count as the same word.
+const ROLES = ['surface', 'fill', 'text', 'border'];
+const sameWord = (word) => (word.toLowerCase() === 'grey' ? 'gray' : word.toLowerCase());
+const rampFile = join('tokens', 'primitives', 'color.json');
+const ramps = new Set(
+  Object.keys(existsSync(rampFile) ? JSON.parse(readFileSync(rampFile, 'utf8')).color ?? {} : {})
+    .filter((key) => !key.startsWith('$'))
+    .map(sameWord),
+);
+// A semantic is a colour if it sits under color, or points at a colour primitive.
+const isColour = ({ path, value }) => path.startsWith('color.') || Boolean(referenceIn(value)?.startsWith('color.'));
+check('Semantic colours are named color.<role>.<intent> after a job, not a colour', semantics
+  .filter(isColour)
+  .flatMap(({ path, file }) => {
+    const [first, role, intent, ...extra] = path.split('.');
+    const problems = [];
+    if (first !== 'color' || !intent || extra.length > 0 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(intent)) {
+      problems.push(`${file}: ${path} should be named color.<role>.<intent>, with an optional -state at the end, as in color.fill.brand-hover.`);
+    } else if (!ROLES.includes(role)) {
+      problems.push(`${file}: ${path} has the role "${role}". The role is surface, fill, text or border.`);
+    }
+    const colourWords = new Set(path.split(/[.-]/).filter((word) => ramps.has(sameWord(word))));
+    for (const word of colourWords) {
+      problems.push(`${file}: ${path} names the colour ${word}. Name the job it does instead, as in color.fill.brand.`);
+    }
+    return problems;
+  }));
+
+// 8. No script, workflow or root config file names a brand. The brand names are
+//    the file names in tokens/brands/, read the way the build reads them, so
+//    none is written here. Root config files are dotfiles such as .nvmrc and
+//    files such as package.json or vite.config.js. package-lock.json is left
+//    out: npm writes it, and it lists packages, not brands.
+const brandNames = existsSync(join('tokens', 'brands'))
+  ? readdirSync(join('tokens', 'brands'))
+      .filter((file) => file.endsWith('.json'))
+      .map((file) => file.replace(/\.json$/, ''))
+  : [];
+const filesIn = (dir) =>
+  existsSync(dir)
+    ? readdirSync(dir, { recursive: true })
+        .map((file) => join(dir, file))
+        .filter((file) => statSync(file).isFile())
+    : [];
+const CONFIG_ENDINGS = ['.json', '.js', '.mjs', '.cjs', '.ts', '.yml', '.yaml', '.toml'];
+const rootConfig = readdirSync('.')
+  .filter((file) => file !== 'package-lock.json' && file !== '.DS_Store')
+  .filter((file) => file.startsWith('.') || CONFIG_ENDINGS.some((ending) => file.endsWith(ending)))
+  .filter((file) => statSync(file).isFile());
+const escapeForRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// A whole word: no letter, digit or underscore right before or after it.
+const brandWord = new RegExp(`(?<!\\w)(?:${brandNames.map(escapeForRegExp).join('|')})(?!\\w)`, 'gi');
+check('No script, workflow or root config file names a brand', brandNames.length === 0 ? [] :
+  [...filesIn('scripts'), ...filesIn('.github'), ...rootConfig].flatMap((file) =>
+    readFileSync(file, 'utf8')
+      .split('\n')
+      .flatMap((line, i) => [...line.matchAll(brandWord)].map(([name]) =>
+        `${file}:${i + 1} names the brand ${name}. Brands are the files in tokens/brands/, so read them from there instead.`)),
+  ));
 
 if (failed > 0) {
   console.log(`\n${failed} check${failed === 1 ? '' : 's'} failed.`);
