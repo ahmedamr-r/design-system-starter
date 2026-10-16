@@ -1,0 +1,5 @@
+Two rules in AGENTS.md have no check yet. Add a check for each to scripts/check.js, failing with a plain message like the others:
+1. a semantic colour is named color.<role>.<intent>, with an optional -state at the end. The role is surface, fill, text or border, the intent can be any name for a job, and no word in the name is a colour ramp, such as blue or green. Read the ramps from tokens/primitives/color.json, so a new one is covered too, and treat grey and gray as the same word.
+2. no file in scripts/ or .github/, and no config file at the root such as package.json or vite.config.js, contains a brand name as a whole word. Read the brand names from the files in tokens/brands/, and never write one into the check itself.
+
+Number the new checks 7 and 8, and leave the six that are there as they are, numbers included. Then change AGENTS.md so it says exactly which rules the check enforces. Break each rule once to show me its message, with a semantic colour named color.text.blue and a brand name in scripts/build.js, then put both back.

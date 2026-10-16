@@ -25,12 +25,12 @@ tokens/
   locales/      empty until part five
 scripts/
   build.js      Style Dictionary 5, keeping every reference as var()
-  check.js      six checks that fail with a plain message
+  check.js      eight checks that fail with a plain message
 .github/
   workflows/
     check.yml   runs the build and the check on every pull request
 demo/           the same card for Harbor, Grove, and Grove inside Harbor
-prompts/        the prompt behind each commit
+prompts/        the prompt behind each step
 AGENTS.md       how to work here, and the rules for tokens
 ```
 
@@ -50,6 +50,7 @@ AGENTS.md       how to work here, and the rules for tokens
 
 | Commit | Prompt |
 | --- | --- |
+| No commit, it only reads a product's styles | [00-inventory](prompts/3-tokens/00-inventory.md) |
 | Add primitive tokens | [01-primitives](prompts/3-tokens/01-primitives.md) |
 | Add semantic tokens | [02-semantics](prompts/3-tokens/02-semantics.md) |
 | Build CSS that keeps references | [03-references](prompts/3-tokens/03-references.md) |
@@ -57,6 +58,7 @@ AGENTS.md       how to work here, and the rules for tokens
 | Add a side-by-side demo and a check script | [05-demo-and-check](prompts/3-tokens/05-demo-and-check.md) |
 | Add the token rules | [06-token-rules](prompts/3-tokens/06-token-rules.md) |
 | Add a component layer for Button | [07-component-layer](prompts/3-tokens/07-component-layer.md) |
+| Check the naming pattern and brand names | [08-check-names](prompts/3-tokens/08-check-names.md) |
 
 To follow along from scratch, start an empty folder and give your agent the prompts in order. In your own repository each prompt would be its own branch and pull request. Here each one is a single commit, so you can compare your agent's work with mine.
 

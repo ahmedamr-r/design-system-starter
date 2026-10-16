@@ -1,0 +1,1 @@
+This folder holds a product that already exists. Before we add any tokens, read its styles and list every colour, font size, font weight, spacing value and corner radius they use, with how many times each one appears. Put colours that are nearly the same next to each other, and mark anything used fewer than three times. Don't create or change any files.
