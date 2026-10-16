@@ -1,0 +1,26 @@
+{
+  "color": {
+    "$type": "color",
+    "$description": "The dark answer for every colour semantic. Where dark is the same as light it still says so, so a semantic added later cannot be left out.",
+    "surface": {
+      "page": { "$value": "{color.gray.950}" },
+      "default": { "$value": "{color.gray.900}" }
+    },
+    "fill": {
+      "brand": { "$value": "{color.gray.900}" },
+      "brand-hover": { "$value": "{color.gray.950}" },
+      "brand-subtle": { "$value": "{color.gray.100}" }
+    },
+    "text": {
+      "default": { "$value": "{color.gray.50}" },
+      "subtle": { "$value": "{color.gray.400}" },
+      "on-fill": { "$value": "{color.gray.0}" },
+      "brand": { "$value": "{color.gray.900}" },
+      "link": { "$value": "{color.gray.900}" }
+    },
+    "border": {
+      "default": { "$value": "{color.gray.800}" },
+      "focus": { "$value": "{color.gray.900}" }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 // Checks the token rules that are easy to break and hard to see.
-// Run it after `npm run build`; it reads the token files, the demo CSS,
-// dist/tokens.css, and the scripts, workflows and config files that must not
-// name a brand. It prints one line per check, and exits with an error if any fail.
+// Run it after `npm run build`; it reads the token files, the demo's CSS and
+// HTML, dist/tokens.css, and the scripts, workflows and config files that must
+// not name a brand. It prints one line per check, and exits with an error if any fail.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -35,6 +35,7 @@ const primitives = layer('primitives');
 const semantics = layer('semantics');
 const components = layer('components');
 const brands = layer('brands');
+const modes = layer('modes');
 
 const names = (tokens) => new Set(tokens.map((token) => token.path));
 const primitiveNames = names(primitives);
@@ -85,7 +86,7 @@ check('Colour values appear only in tokens/primitives', [
 ]);
 
 // 2. Every token points one layer down: semantics at primitives, components at
-//    semantics. A brand follows the rule of the token it re-points.
+//    semantics. A brand or mode follows the rule of the token it re-points.
 const pointsDown = (token, below, belowName) => {
   const target = referenceIn(token.value);
   if (!target) return [`${token.file}: ${token.path} holds a value. It should point at a ${belowName} token.`];
@@ -95,7 +96,7 @@ const pointsDown = (token, below, belowName) => {
 check('Every token points one layer down', [
   ...semantics.flatMap((token) => pointsDown(token, primitiveNames, 'primitive')),
   ...components.flatMap((token) => pointsDown(token, semanticNames, 'semantic')),
-  ...brands.flatMap((token) =>
+  ...[...brands, ...modes].flatMap((token) =>
     componentNames.has(token.path)
       ? pointsDown(token, semanticNames, 'semantic')
       : pointsDown(token, primitiveNames, 'primitive'),
@@ -150,8 +151,13 @@ const builtSemantics = blocks.flatMap(({ selector, declarations }) =>
 );
 
 // 5. In the built CSS, every semantic and component token is still a reference.
-check('Every semantic and component token in dist/tokens.css is a var() reference', builtSemantics
-  .filter(({ value }) => !value.startsWith('var('))
+//    light-dark() of two references counts as one: it is how the build writes
+//    a semantic whose dark answer differs from its light one.
+const VAR = String.raw`var\(\s*--[\w-]+\s*\)`;
+const LIGHT_DARK = new RegExp(String.raw`^light-dark\(\s*${VAR}\s*,\s*${VAR}\s*\)$`);
+const isReference = (value) => value.startsWith('var(') || LIGHT_DARK.test(value);
+check('Every semantic and component token in dist/tokens.css is a var() reference, or light-dark() of two', builtSemantics
+  .filter(({ value }) => !isReference(value))
   .map(({ name, value, selector }) => `${name} is baked to ${value} under ${selector}. A brand that re-points what it reads will not reach it.`));
 
 // 6. Semantics and component tokens are declared on every brand scope, before the brands.
@@ -228,6 +234,66 @@ check('No script, workflow or root config file names a brand', brandNames.length
       .flatMap((line, i) => [...line.matchAll(brandWord)].map(([name]) =>
         `${file}:${i + 1} names the brand ${name}. Brands are the files in tokens/brands/, so read them from there instead.`)),
   ));
+
+// 9. A mode file re-points colour semantics that exist, and nothing else. It
+//    holds no colour value and sets no primitive, so color.gray.900 is the
+//    same colour in every mode.
+const colourSemantics = semantics.filter(isColour);
+const colourSemanticNames = names(colourSemantics);
+check('Mode files only re-point colour semantics that exist', modes.flatMap(({ path, value, file }) => {
+  const problems = [];
+  if (typeof value === 'object' ? 'colorSpace' in value : COLOUR_LITERAL.test(String(value))) {
+    problems.push(`${file}: ${path} holds a colour value. Point it at a primitive instead.`);
+  }
+  if (primitiveNames.has(path)) {
+    problems.push(`${file}: ${path} is a primitive. A mode re-points semantics and leaves primitives alone, so ${path} is the same colour in every mode.`);
+  } else if (!semanticNames.has(path) && !componentNames.has(path)) {
+    problems.push(`${file}: ${path} is not a token. Did you mean ${closest(path, colourSemanticNames)}?`);
+  } else if (!colourSemanticNames.has(path)) {
+    problems.push(`${file}: ${path} is not a colour semantic. A mode re-points colour semantics only.`);
+  }
+  return problems;
+}));
+
+// 10. Every colour semantic has an answer in tokens/modes/dark.json, even where
+//     dark is the same as light, so a colour semantic added later cannot be
+//     forgotten there.
+const DARK = join('tokens', 'modes', 'dark.json');
+const darkAnswers = names(modes.filter(({ file }) => file === DARK));
+check('Every colour semantic has an answer in tokens/modes/dark.json', !existsSync(DARK)
+  ? [`${DARK} is missing. Every colour semantic needs a dark answer there.`]
+  : colourSemantics
+      .filter(({ path }) => !darkAnswers.has(path))
+      .map(({ path, value, file }) =>
+        `${DARK} has no answer for ${path}. Add one; if dark is the same as light, that is ${value}, as in ${file}.`));
+
+// 11. dark is the only mode. The build writes a mode as light-dark(), which has
+//     a light answer and a dark one, and light is what the semantics hold.
+check('tokens/modes holds no mode other than dark', jsonFiles(join('tokens', 'modes'))
+  .filter((file) => file !== DARK)
+  .map((file) => `${file} is a mode other than dark. light-dark() has only a light answer and a dark one, and light is what the semantics already hold.`));
+
+// 12. The demo reads only variables dist/tokens.css writes, so a misspelt name
+//     fails here instead of quietly falling back to an inherited or default value. The
+//     suggestion leaves out primitives, which check 3 forbids the demo to read.
+const written = new Set(blocks.flatMap(({ declarations }) => declarations.map(({ name }) => name)));
+const readable = [...written].filter((name) => !primitiveCss.has(name));
+// Comments are blanked, not removed, so line numbers stay right.
+const blank = (comment) => comment.replace(/[^\n]/g, ' ');
+const demoFiles = existsSync('demo')
+  ? readdirSync('demo')
+      .filter((file) => file.endsWith('.css') || file.endsWith('.html'))
+      .map((file) => ({
+        file: join('demo', file),
+        text: readFileSync(join('demo', file), 'utf8').replace(/\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->/g, blank),
+      }))
+  : [];
+check('The demo reads only variables the build writes', demoFiles.flatMap(({ file, text }) =>
+  text.split('\n').flatMap((line, i) =>
+    [...line.matchAll(/var\(\s*(--[\w-]+)/g)]
+      .filter(([, name]) => !written.has(name))
+      .map(([, name]) => `${file}:${i + 1} reads ${name}, which dist/tokens.css does not write. Did you mean ${closest(name, readable)}?`)),
+));
 
 if (failed > 0) {
   console.log(`\n${failed} check${failed === 1 ? '' : 's'} failed.`);

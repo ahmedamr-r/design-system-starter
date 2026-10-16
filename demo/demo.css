@@ -1,4 +1,4 @@
-/* Reads semantic tokens, and the button reads its own component tokens. npm run check fails if a primitive or a raw colour shows up here. */
+/* Reads semantic tokens, and the button reads its own component tokens. npm run check fails if a primitive, a raw colour, or a variable the build does not write shows up here. */
 
 body {
   margin: 0;
@@ -23,6 +23,19 @@ body {
   gap: var(--space-stack);
 }
 
+/* An element that sets a mode paints its own background and text colour, and
+   so does a card (below). A colour an element inherits was worked out on the
+   ancestor that set it, in that ancestor's mode, so it can be the wrong one. */
+[data-mode] {
+  background: var(--color-surface-page);
+  color: var(--color-text-default);
+}
+
+.panel[data-mode] {
+  padding: var(--space-surface);
+  border-radius: var(--radius-surface);
+}
+
 .panel-label {
   margin: 0;
   color: var(--color-text-subtle);
@@ -30,11 +43,13 @@ body {
   font-weight: var(--type-label-weight);
 }
 
+/* Comes after [data-mode], so a card that sets a mode keeps the card surface. */
 .card {
   display: grid;
   gap: var(--space-stack);
   padding: var(--space-surface);
   background: var(--color-surface-default);
+  color: var(--color-text-default);
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-surface);
 }
