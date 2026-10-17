@@ -1,0 +1,55 @@
+{
+  "$description": "Copied from _template.json. Every step of the brand ramp points at the same step of the yellow ramp, where the client's own yellow sits closest to 200; each step says what it paints. The button keeps the corners it has with no brand.",
+  "color": {
+    "$type": "color",
+    "brand": {
+      "50": {
+        "$value": "{color.yellow.50}",
+        "$description": "Light: the fill behind tags and soft highlights (color.fill.brand-subtle). Dark: nothing; tags use 800 there."
+      },
+      "100": {
+        "$value": "{color.yellow.100}",
+        "$description": "Paints nothing yet, in light or in dark. Set it anyway, so the ramp is whole when a semantic needs this step."
+      },
+      "200": {
+        "$value": "{color.yellow.200}",
+        "$description": "Paints nothing yet, in light or in dark. Set it anyway, so the ramp is whole when a semantic needs this step."
+      },
+      "300": {
+        "$value": "{color.yellow.300}",
+        "$description": "Light: nothing. Dark: text on a subtle brand fill, such as a tag's (color.text.brand)."
+      },
+      "400": {
+        "$value": "{color.yellow.400}",
+        "$description": "Light: nothing. Dark: links (color.text.link) and the keyboard focus ring (color.border.focus)."
+      },
+      "500": {
+        "$value": "{color.yellow.500}",
+        "$description": "Paints nothing yet, in light or in dark. Set it anyway, so the ramp is whole when a semantic needs this step."
+      },
+      "600": {
+        "$value": "{color.yellow.600}",
+        "$description": "Light: the main button (color.fill.brand) and the keyboard focus ring (color.border.focus). Dark: the main button (color.fill.brand)."
+      },
+      "700": {
+        "$value": "{color.yellow.700}",
+        "$description": "Light: the main button under the pointer (color.fill.brand-hover), text on a subtle brand fill (color.text.brand) and links (color.text.link). Dark: the main button under the pointer (color.fill.brand-hover)."
+      },
+      "800": {
+        "$value": "{color.yellow.800}",
+        "$description": "Light: nothing. Dark: the fill behind tags and soft highlights (color.fill.brand-subtle)."
+      },
+      "900": {
+        "$value": "{color.yellow.900}",
+        "$description": "Paints nothing yet, in light or in dark. Set it anyway, so the ramp is whole when a semantic needs this step."
+      }
+    }
+  },
+  "button": {
+    "radius": {
+      "$type": "dimension",
+      "$value": "{radius.control}",
+      "$description": "The button's corners, the same in light and in dark, since a mode changes colours only. With no brand they follow radius.control; point at radius.pill for pill-shaped buttons."
+    }
+  }
+}

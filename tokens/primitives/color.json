@@ -51,6 +51,19 @@
       "700": { "$value": { "colorSpace": "oklch", "components": [0.46, 0.136, 27], "hex": "#95312b" } },
       "800": { "$value": { "colorSpace": "oklch", "components": [0.38, 0.1, 27], "hex": "#6e2924" } },
       "900": { "$value": { "colorSpace": "oklch", "components": [0.3, 0.063, 27], "hex": "#49201c" } }
+    },
+    "yellow": {
+      "$description": "The same ten lightness steps as the other ramps, at hue 87. Yellow is only vivid when it is light, so instead of the other ramps' chroma curve, which peaks at 500 and 600, each step takes as much chroma as sRGB can show at its lightness, up to 0.159. That keeps 200 a full yellow and lets 600 to 900 go as dark as the other ramps, as golden browns.",
+      "50": { "$value": { "colorSpace": "oklch", "components": [0.97, 0.033, 87], "hex": "#fff4dd" } },
+      "100": { "$value": { "colorSpace": "oklch", "components": [0.93, 0.079, 87], "hex": "#ffe5ab" } },
+      "200": { "$value": { "colorSpace": "oklch", "components": [0.87, 0.151, 87], "hex": "#ffcd4d" } },
+      "300": { "$value": { "colorSpace": "oklch", "components": [0.79, 0.159, 87], "hex": "#e6b211" } },
+      "400": { "$value": { "colorSpace": "oklch", "components": [0.7, 0.143, 87], "hex": "#c59701" } },
+      "500": { "$value": { "colorSpace": "oklch", "components": [0.62, 0.126, 87], "hex": "#a78004" } },
+      "600": { "$value": { "colorSpace": "oklch", "components": [0.54, 0.11, 87], "hex": "#8a6901" } },
+      "700": { "$value": { "colorSpace": "oklch", "components": [0.46, 0.094, 87], "hex": "#6f5400" } },
+      "800": { "$value": { "colorSpace": "oklch", "components": [0.38, 0.077, 87], "hex": "#543f01" } },
+      "900": { "$value": { "colorSpace": "oklch", "components": [0.3, 0.061, 87], "hex": "#3b2b00" } }
     }
   }
 }
