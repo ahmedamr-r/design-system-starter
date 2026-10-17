@@ -69,13 +69,15 @@ On their own, in their brand file:
 - The hue: which primitive ramp the ten steps point at. Check 4 keeps it step for step on one ramp, and check 14 fails a hue that falls short of a ratio.
 - The button's corners, at any radius in `tokens/semantics/shape.json`, such as `radius.pill`. Check 2 makes them point at a semantic; that it is a radius is by hand.
 
-A conversation first, by hand:
+A conversation first. Code owner review, below, holds a client to all but the last:
 
 - A colour no primitive ramp has, such as their exact brand colour. It adds a ramp to `tokens/primitives/color.json`, ten steps at the lightness of the others, that every brand can then pick.
 - Keeping a hue that falls short of a ratio, or one job at a different step, such as the main button in their exact colour. Either means moving a step in `tokens/semantics/` or `tokens/modes/dark.json`, which moves that job for every brand.
 - Any token the template does not list, such as a font. Adding it to the template lets every brand set it.
 - A lower ratio, or a mode other than light and dark. The ratios and the two modes are the same for every brand, and a third mode would change how the build works.
 - A new name. The file name is the `data-brand` value and the id in `dist/brands.json`, so every page that uses the old name loses the brand.
+
+`.github/CODEOWNERS` is what enforces this in each client's copy. It makes @ahmedamr-r the owner of every file but the brand files, the `.json` files in `tokens/brands/` whose names do not start with an underscore, so a pull request that changes a rule, a check, the template or a shared token waits for that review, and one that changes only brand files does not. It blocks a merge only once the ruleset on main turns on Require review from Code Owners, and only while @ahmedamr-r has write access to the copy. Renaming a brand file changes only brand files, so a new name is the one request above that passes without review: that stays by hand.
 
 ## What `npm run check` enforces
 
@@ -96,4 +98,4 @@ Each check fails with a plain message that names the file. They are numbered as 
 13. Every text and focus colour has a pair in `tokens/contrast-pairs.json`. They are each `color.text` semantic, `color.border.focus`, and any component token that points at one, such as `button.label`, whose pair also counts for the semantic it points at. Every token the file names exists.
 14. Every pair in `tokens/contrast-pairs.json` reaches its ratio, for every brand and for no brand, in light and in dark. Both colours are worked out from `dist/tokens.css` the way a browser would, and measured with the WCAG formula on their hex values. Every pair that falls short prints on its own line, with its brand and mode. A brand file that sets nothing is not measured, and the check's title names it.
 
-Nothing checks the rest, so keep it by hand: that `tokens/contrast-pairs.json` lists every surface or fill the demo puts each colour on, that primitives are named for what they are, that a component file exists only when a brand restyles that component and a semantic would not do, that pages use no raw sizes or fonts (check 1 catches only colours), that anything that paints a surface or a fill sets its text colour and an element with a `data-mode` paints its own surface, that a new brand starts as a copy of the template, that a brand points the button's radius at a radius, that brand names stay out of any other list, config or code, and that a client's request outside what they may change in their own brand waits for a conversation.
+Nothing checks the rest, so keep it by hand: that `tokens/contrast-pairs.json` lists every surface or fill the demo puts each colour on, that primitives are named for what they are, that a component file exists only when a brand restyles that component and a semantic would not do, that pages use no raw sizes or fonts (check 1 catches only colours), that anything that paints a surface or a fill sets its text colour and an element with a `data-mode` paints its own surface, that a new brand starts as a copy of the template, that a brand points the button's radius at a radius, that brand names stay out of any other list, config or code, and that a client renames their brand only after a conversation. Code owner review, not this check, holds a client to the rest of what they may not change on their own.

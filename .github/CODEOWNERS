@@ -1,0 +1,18 @@
+# Who has to review a pull request before it can merge. GitHub reads this file
+# from the branch the pull request merges into, and for each file the last
+# pattern below that matches it decides its owner. It blocks a merge only once
+# the ruleset on main turns on "Require review from Code Owners", and only for
+# an owner with write access to the repository.
+
+# Everything: AGENTS.md and the other rules, the scripts and the checks, the
+# workflow, the shared tokens, the demo, the README in tokens/brands/ and this
+# file.
+*                         @ahmedamr-r
+
+# The brand files have no owner, so a pull request that changes nothing else
+# merges without that review once npm run check passes.
+/tokens/brands/*.json
+
+# A file in tokens/brands/ whose name starts with an underscore is not a brand.
+# _template.json is one, and it decides what every brand may set.
+/tokens/brands/_*.json    @ahmedamr-r
