@@ -1,0 +1,3 @@
+Add tokens/brands/_template.json, the file a new brand is copied from. List every token a brand may set, the ten steps of color.brand and Button's radius, each pointing at the value it has with no brand and with a $description saying what it paints in light and in dark. The build and the check treat a file whose name starts with an underscore as not a brand.
+
+Update the check so a brand file sets every step and nothing the template doesn't list. If a brand file sets nothing at all, the build should still finish, and the check should leave it out of the contrast measurements and say what's missing.
