@@ -46,6 +46,8 @@ Name the job, not the colour. `color.fill.brand`, never `color.fill.blue`.
 
 A brand is one file in `tokens/brands/`. The build finds it there. Never add a brand name to any script, list or config.
 
+A file whose name starts with an underscore is not a brand, to the build or the check. `tokens/brands/_template.json` is one: it lists every token a brand may set, each at its value with no brand and with a description of what it paints in light and in dark. A new brand starts as a copy of it. When brands should be able to set another token, add it to the template first.
+
 ## What `npm run check` enforces
 
 Each check fails with a plain message that names the file. They are numbered as in `scripts/check.js`.
@@ -53,16 +55,16 @@ Each check fails with a plain message that names the file. They are numbered as 
 1. Colour values appear only in `tokens/primitives/`. No semantic, component or brand token holds one, and no CSS file in `demo/` does.
 2. Every step of the brand ramp points at a primitive, every other semantic at a primitive or a step of the ramp, and every component token at a semantic. A brand or mode token points at what the token it re-points would.
 3. The CSS and HTML in `demo/` read no primitive and no step of the brand ramp.
-4. A brand file sets only semantic and component tokens that already exist. Its only colours are the steps of the brand ramp: it sets every step, each at the same step of one primitive ramp.
+4. A brand file sets only semantic and component tokens that already exist, and nothing `tokens/brands/_template.json` does not list. Its only colours are the steps of the brand ramp: it sets every step, each at the same step of one primitive ramp. A brand file that sets nothing fails here with the list of what it is missing; the build still finishes and writes no block for it.
 5. In `dist/tokens.css`, every semantic and component token is still a `var()` reference, or `light-dark()` of two.
 6. In `dist/tokens.css`, semantic and component tokens are declared on `:root` and `[data-brand]`, before the brand blocks.
 7. Every semantic colour is named `color.<role>.<intent>`, with an optional `-<state>`, and its role is `surface`, `fill`, `text` or `border`. No word in the name is a ramp from `tokens/primitives/color.json`, and grey and gray count as the same word. The brand ramp, `color.brand.<step>` with a number for the step, is the one exception, and any other name under `color.brand` fails.
-8. No file in `scripts/` or `.github/`, and no config file at the root, contains a brand name as a whole word, in any letter case. The brand names are the file names in `tokens/brands/`. Root config files are dotfiles and `.json`, `.js`, `.mjs`, `.cjs`, `.ts`, `.yml`, `.yaml` and `.toml` files, except `package-lock.json`.
+8. No file in `scripts/` or `.github/`, and no config file at the root, contains a brand name as a whole word, in any letter case. The brand names are the file names in `tokens/brands/`, leaving out any that starts with an underscore. Root config files are dotfiles and `.json`, `.js`, `.mjs`, `.cjs`, `.ts`, `.yml`, `.yaml` and `.toml` files, except `package-lock.json`.
 9. A mode file sets only colour semantics that already exist. It holds no colour value, sets no primitive, and never touches a step of the brand ramp.
 10. Every colour semantic but the steps of the brand ramp has an answer in `tokens/modes/dark.json`.
 11. `tokens/modes/` holds no mode other than dark, since `light-dark()` has only a light answer and a dark one.
 12. The CSS and HTML in `demo/` read only variables that `dist/tokens.css` writes. The message suggests the closest name the demo may read.
 13. Every text and focus colour has a pair in `tokens/contrast-pairs.json`. They are each `color.text` semantic, `color.border.focus`, and any component token that points at one, such as `button.label`, whose pair also counts for the semantic it points at. Every token the file names exists.
-14. Every pair in `tokens/contrast-pairs.json` reaches its ratio, for every brand and for no brand, in light and in dark. Both colours are worked out from `dist/tokens.css` the way a browser would, and measured with the WCAG formula on their hex values. Every pair that falls short prints on its own line, with its brand and mode.
+14. Every pair in `tokens/contrast-pairs.json` reaches its ratio, for every brand and for no brand, in light and in dark. Both colours are worked out from `dist/tokens.css` the way a browser would, and measured with the WCAG formula on their hex values. Every pair that falls short prints on its own line, with its brand and mode. A brand file that sets nothing is not measured, and the check's title names it.
 
 Nothing checks the rest, so keep it by hand: that `tokens/contrast-pairs.json` lists every surface or fill the demo puts each colour on, that primitives are named for what they are, that a component file exists only when a brand restyles that component and a semantic would not do, that pages use no raw sizes or fonts (check 1 catches only colours), that an element with a `data-mode` and every card set their own background and text colour, and that brand names stay out of any other list or config.

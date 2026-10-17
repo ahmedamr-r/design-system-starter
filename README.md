@@ -64,7 +64,7 @@ To follow along from scratch, start an empty folder and give your agent the prom
 
 ## Add a brand
 
-Copy `tokens/brands/harbor.json` to `tokens/brands/<name>.json`, point its ten ramp steps at the same steps of another primitive ramp, then run `npm run build && npm run check`. Use it with `data-brand="<name>"` on any element.
+Copy `tokens/brands/_template.json` to `tokens/brands/<name>.json`, point its ten ramp steps at the same steps of one primitive ramp, keep, change or delete its button radius, then run `npm run build && npm run check`. Use it with `data-brand="<name>"` on any element.
 
 ## License
 

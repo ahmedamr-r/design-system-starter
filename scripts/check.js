@@ -4,7 +4,7 @@
 // and config files that must not name a brand. It prints one line per check,
 // and exits with an error if any fail.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { resolver } from './lib/resolve.js';
 
 // ---------------------------------------------------------------- reading
@@ -16,8 +16,11 @@ const jsonFiles = (dir) =>
         .map((file) => join(dir, file))
     : [];
 
-// Every token in a file, as { path: 'color.fill.brand', value, file }.
+// Every token in a file, as { path: 'color.fill.brand', value, file }. An
+// empty file holds none.
 function tokensIn(file) {
+  const text = readFileSync(file, 'utf8');
+  if (text.trim() === '') return [];
   const found = [];
   const walk = (node, path) => {
     if (node && typeof node === 'object' && '$value' in node) {
@@ -28,7 +31,7 @@ function tokensIn(file) {
       if (!key.startsWith('$')) walk(child, [...path, key]);
     }
   };
-  walk(JSON.parse(readFileSync(file, 'utf8')), []);
+  walk(JSON.parse(text), []);
   return found;
 }
 
@@ -36,8 +39,20 @@ const layer = (name) => jsonFiles(join('tokens', name)).flatMap(tokensIn);
 const primitives = layer('primitives');
 const semantics = layer('semantics');
 const components = layer('components');
-const brands = layer('brands');
 const modes = layer('modes');
+
+// A file in tokens/brands/ whose name starts with an underscore is not a
+// brand, here as in the build. _template.json is one: it lists every token a
+// brand may set, each at its value with no brand, for a new brand to be copied
+// from. Checks 1 and 2 still read every file in the folder; checks 4, 8 and 14
+// read the brands.
+const BRANDS = join('tokens', 'brands');
+const TEMPLATE = join(BRANDS, '_template.json');
+const isBrand = (file) => !basename(file).startsWith('_');
+const brandFolder = layer('brands');
+const brandFiles = jsonFiles(BRANDS).filter(isBrand);
+const brands = brandFolder.filter(({ file }) => isBrand(file));
+const template = brandFolder.filter(({ file }) => file === TEMPLATE);
 
 const names = (tokens) => new Set(tokens.map((token) => token.path));
 const primitiveNames = names(primitives);
@@ -88,7 +103,7 @@ const demoCss = existsSync('demo')
   : [];
 
 check('Colour values appear only in tokens/primitives', [
-  ...[...semantics, ...components, ...brands]
+  ...[...semantics, ...components, ...brandFolder]
     .filter(({ value }) =>
       typeof value === 'object' ? 'colorSpace' in value : COLOUR_LITERAL.test(String(value)),
     )
@@ -120,7 +135,7 @@ const pointsDown = (token) => {
   return [];
 };
 check('Every token points one layer down, or at a step of the brand ramp',
-  [...semantics, ...components, ...brands, ...modes].flatMap(pointsDown));
+  [...semantics, ...components, ...brandFolder, ...modes].flatMap(pointsDown));
 
 // 3. The demo reads semantic tokens, never a primitive and never a step of the
 //    brand ramp. A step has no dark answer: color.text.link turns lighter in
@@ -148,8 +163,8 @@ check('The demo reads no primitive and no step of the brand ramp', demoReads.fla
   return [];
 }));
 
-// 4. A brand file only re-points tokens that exist, and the only colours it
-//    sets are the steps of the brand ramp.
+// 4. A brand file sets every step of the brand ramp, its only colours, and
+//    nothing tokens/brands/_template.json does not list.
 function closest(word, options) {
   const distance = (a, b) => {
     const row = Array.from({ length: b.length + 1 }, (_, i) => i);
@@ -170,18 +185,28 @@ function closest(word, options) {
 // the same step of one primitive ramp, as color.brand.600 at {color.blue.600}.
 // The brand semantics read the steps, so they follow the brand without being
 // re-pointed, and each keeps the dark answer tokens/modes/dark.json gives it.
+// Anything else a brand sets, such as button.radius, must be listed in the
+// template. A brand file that sets nothing gets one problem saying what it is
+// missing: the build writes no block for it, and check 14 leaves it out.
 const PRIMITIVE_STEP = /^color\.([^.]+)\.([^.]+)$/;
+const hasTemplate = existsSync(TEMPLATE);
+const templateNames = names(template);
 const brandProblems = (file) => {
   const own = brands.filter((token) => token.file === file);
+  if (own.length === 0) {
+    return [`${file} sets nothing. It is missing every step of the brand ramp: ${[...rampSteps].join(', ')}. Copy ${TEMPLATE}, which lists them and every other token a brand may set, and point each step at the same step of one primitive ramp. Until then the build writes no block for it, and the contrast check leaves it out.`];
+  }
   const problems = [];
   for (const token of own) {
     const { path } = token;
     if (!layeredNames.has(path)) {
-      problems.push(`${file}: ${path} is not a semantic or component token. Did you mean ${closest(path, layeredNames)}?`);
+      problems.push(`${file}: ${path} is not a semantic or component token. Did you mean ${closest(path, templateNames.size > 0 ? templateNames : layeredNames)}?`);
     } else if (!rampSteps.has(path) && isColour(token)) {
       problems.push(componentNames.has(path)
         ? `${file}: ${path} is a colour, and a brand sets no colour but the brand ramp. ${path} follows the ramp through the semantic it reads in tokens/components/.`
         : `${file}: ${path} is a colour, and a brand sets no colour but the brand ramp. Point ${path} at a step of the ramp in tokens/semantics/ for light and tokens/modes/dark.json for dark, and every brand reaches it.`);
+    } else if (hasTemplate && !templateNames.has(path)) {
+      problems.push(`${file}: ${path} is not in ${TEMPLATE}, the list of every token a brand may set. Take it out, or, if every brand should be able to set it, add it to the template first, at its value with no brand.`);
     }
   }
   const steps = own.filter(({ path }) => rampSteps.has(path));
@@ -208,8 +233,10 @@ const brandProblems = (file) => {
   }
   return problems;
 };
-check('Brand files set only tokens that exist, and no colour but the brand ramp, step for step on one primitive ramp',
-  jsonFiles(join('tokens', 'brands')).flatMap(brandProblems));
+check(`Brand files set every step of the brand ramp, step for step on one primitive ramp, and nothing ${TEMPLATE} does not list`, [
+  ...(hasTemplate ? [] : [`${TEMPLATE} is missing. It lists every token a brand may set, each at its value with no brand, and a new brand is copied from it.`]),
+  ...brandFiles.flatMap(brandProblems),
+]);
 
 // 5 and 6 read the built CSS.
 if (!existsSync('dist/tokens.css')) {
@@ -285,13 +312,14 @@ check('Semantic colours are named color.<role>.<intent> after a job, not a colou
   }));
 
 // 8. No script, workflow or root config file names a brand. The brand names are
-//    the file names in tokens/brands/, read the way the build reads them, so
-//    none is written here. Root config files are dotfiles such as .nvmrc and
-//    files such as package.json or vite.config.js. package-lock.json is left
-//    out: npm writes it, and it lists packages, not brands.
-const brandNames = existsSync(join('tokens', 'brands'))
-  ? readdirSync(join('tokens', 'brands'))
-      .filter((file) => file.endsWith('.json'))
+//    the file names in tokens/brands/, read the way the build reads them and
+//    leaving out any that starts with an underscore, so none is written here.
+//    Root config files are dotfiles such as .nvmrc and files such as
+//    package.json or vite.config.js. package-lock.json is left out: npm
+//    writes it, and it lists packages, not brands.
+const brandNames = existsSync(BRANDS)
+  ? readdirSync(BRANDS)
+      .filter((file) => file.endsWith('.json') && !file.startsWith('_'))
       .map((file) => file.replace(/\.json$/, ''))
   : [];
 const filesIn = (dir) =>
@@ -371,10 +399,17 @@ check('The demo reads only variables the build writes', demoReads
 // surfaces and fills the demo puts it on, and the ratio it must reach there.
 // Both colours of a pair are worked out from dist/tokens.css by
 // scripts/lib/resolve.js, as the browser would, for every brand and for no
-// brand, in light and in dark. Both checks print every problem they find.
+// brand, in light and in dark. Both checks print every problem they find. A
+// brand file that sets nothing is left out: the build gives it no block, so it
+// would only measure no brand again under its name. Check 4 says what it is
+// missing, and check 14's title names it.
 const PAIRS = join('tokens', 'contrast-pairs.json');
 const colourOf = resolver(readFileSync('dist/tokens.css', 'utf8'));
-const contexts = [null, ...[...brandNames].sort()].flatMap((brand) =>
+const setsNothing = new Set(brandFiles
+  .filter((file) => !brands.some((token) => token.file === file))
+  .map((file) => basename(file, '.json')));
+const leftOut = [...setsNothing].sort();
+const contexts = [null, ...brandNames.filter((brand) => !setsNothing.has(brand)).sort()].flatMap((brand) =>
   ['light', 'dark'].map((mode) => ({ brand, mode })));
 const contextName = ({ brand, mode }) => `${brand ?? 'no brand'}, ${mode}`;
 
@@ -467,6 +502,7 @@ check(`Every text and focus colour has a pair in ${PAIRS}`, [
 const shortfalls = measured.filter(({ reached, ratio }) => reached < ratio);
 check(
   `Every pair in ${PAIRS} reaches its ratio, for each brand and no brand, in light and dark` +
+    (leftOut.length > 0 ? `, leaving out the brands that set nothing: ${leftOut.join(', ')}` : '') +
     (shortfalls.length > 0 ? ` (${shortfalls.length} of ${measured.length} fall short)` : ''),
   shortfalls.map(({ foreground, background, ratio, context, front, back, reached }) =>
     `${contextName(context)}: ${foreground} on ${background} is ${twoPlaces(reached)}:1, needs ${ratio}:1 (${front} on ${back})`),

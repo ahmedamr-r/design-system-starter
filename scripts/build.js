@@ -19,8 +19,14 @@
 // everything inside follows it.
 //
 // Brands are whatever files sit in tokens/brands/. Adding a brand is adding a
-// file; nothing here lists them by name. Light is what the semantics hold, and
-// dark.json is the only mode file the build reads: light-dark() has two answers.
+// file; nothing here lists them by name. A file whose name starts with an
+// underscore is not a brand: _template.json lists every token a brand may set,
+// for a new brand to be copied from. A brand file that sets nothing, empty or
+// {}, gets no block, so data-brand with its name looks like no brand until it
+// sets something; npm run check says what it is missing.
+//
+// Light is what the semantics hold, and dark.json is the only mode file the
+// build reads: light-dark() has two answers.
 import StyleDictionary from 'style-dictionary';
 import { usesReferences } from 'style-dictionary/utils';
 import { existsSync } from 'node:fs';
@@ -95,15 +101,23 @@ const base = new StyleDictionary({
 await base.buildAllPlatforms();
 
 const brands = (await readdir('tokens/brands'))
-  .filter((file) => file.endsWith('.json'))
+  .filter((file) => file.endsWith('.json') && !file.startsWith('_'))
   .map((file) => file.replace(/\.json$/, ''))
   .sort();
 
+// Style Dictionary writes no file for a brand that sets nothing, and cannot
+// read an empty one at all, so those are set aside here instead of failing.
+const empty = [];
 for (const brand of brands) {
+  const source = `tokens/brands/${brand}.json`;
+  if ((await readFile(source, 'utf8')).trim() === '') {
+    empty.push(brand);
+    continue;
+  }
   const sd = new StyleDictionary({
     log,
     include: BASE,
-    source: [`tokens/brands/${brand}.json`],
+    source: [source],
     platforms: platform([
       {
         destination: `brand-${brand}.css`,
@@ -113,8 +127,14 @@ for (const brand of brands) {
       },
     ]),
   });
+  const { allTokens } = await sd.getPlatformTokens('css');
+  if (!allTokens.some((token) => token.isSource)) {
+    empty.push(brand);
+    continue;
+  }
   await sd.buildAllPlatforms();
 }
+const built = brands.filter((brand) => !empty.includes(brand));
 
 // color-scheme picks the answer every light-dark() gives. These come after the
 // :root blocks, so data-mode on <html> wins over the "light dark" set there.
@@ -124,7 +144,7 @@ const schemes = dark.size === 0 ? [] : [
   '[data-mode="dark"] {\n  color-scheme: dark;\n}\n',
 ];
 
-const order = ['primitives.css', 'semantics.css', 'components.css', ...brands.map((b) => `brand-${b}.css`)];
+const order = ['primitives.css', 'semantics.css', 'components.css', ...built.map((b) => `brand-${b}.css`)];
 const blocks = await Promise.all(order.map((file) => readFile(PARTS + file, 'utf8')));
 await mkdir('dist', { recursive: true });
 await writeFile(
@@ -132,5 +152,8 @@ await writeFile(
   `/* Built by scripts/build.js from tokens/. Do not edit by hand. */\n\n${[...blocks, ...schemes].join('\n')}`,
 );
 await rm(PARTS, { recursive: true });
-console.log(`Wrote dist/tokens.css with ${brands.length} brands: ${brands.join(', ')}`);
+console.log(`Wrote dist/tokens.css with ${built.length} brands: ${built.join(', ')}`);
+for (const brand of empty) {
+  console.log(`Left out ${brand}: tokens/brands/${brand}.json sets nothing, so data-brand="${brand}" looks like no brand. npm run check lists what it needs.`);
+}
 if (dark.size > 0) console.log(`Dark mode differs from light in ${paired.length} semantics: ${paired.join(', ')}`);

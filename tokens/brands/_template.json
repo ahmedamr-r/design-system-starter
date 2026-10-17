@@ -1,0 +1,55 @@
+{
+  "$description": "Every token a brand may set, each at its value with no brand. Copy this file to tokens/brands/<name>.json, point the ten steps at the same steps of one primitive ramp, and keep, change or delete button.radius. The build and the check skip any file whose name starts with an underscore, so this one is not a brand.",
+  "color": {
+    "$type": "color",
+    "brand": {
+      "50": {
+        "$value": "{color.gray.50}",
+        "$description": "Light: the fill behind tags and soft highlights (color.fill.brand-subtle). Dark: nothing; tags use 800 there."
+      },
+      "100": {
+        "$value": "{color.gray.100}",
+        "$description": "Paints nothing yet, in light or in dark. Set it anyway, so the ramp is whole when a semantic needs this step."
+      },
+      "200": {
+        "$value": "{color.gray.200}",
+        "$description": "Paints nothing yet, in light or in dark. Set it anyway, so the ramp is whole when a semantic needs this step."
+      },
+      "300": {
+        "$value": "{color.gray.300}",
+        "$description": "Light: nothing. Dark: text on a subtle brand fill, such as a tag's (color.text.brand)."
+      },
+      "400": {
+        "$value": "{color.gray.400}",
+        "$description": "Light: nothing. Dark: links (color.text.link) and the keyboard focus ring (color.border.focus)."
+      },
+      "500": {
+        "$value": "{color.gray.500}",
+        "$description": "Paints nothing yet, in light or in dark. Set it anyway, so the ramp is whole when a semantic needs this step."
+      },
+      "600": {
+        "$value": "{color.gray.600}",
+        "$description": "Light: the main button (color.fill.brand) and the keyboard focus ring (color.border.focus). Dark: the main button (color.fill.brand)."
+      },
+      "700": {
+        "$value": "{color.gray.700}",
+        "$description": "Light: the main button under the pointer (color.fill.brand-hover), text on a subtle brand fill (color.text.brand) and links (color.text.link). Dark: the main button under the pointer (color.fill.brand-hover)."
+      },
+      "800": {
+        "$value": "{color.gray.800}",
+        "$description": "Light: nothing. Dark: the fill behind tags and soft highlights (color.fill.brand-subtle)."
+      },
+      "900": {
+        "$value": "{color.gray.900}",
+        "$description": "Paints nothing yet, in light or in dark. Set it anyway, so the ramp is whole when a semantic needs this step."
+      }
+    }
+  },
+  "button": {
+    "radius": {
+      "$type": "dimension",
+      "$value": "{radius.control}",
+      "$description": "The button's corners, the same in light and in dark, since a mode changes colours only. With no brand they follow radius.control; point at radius.pill for pill-shaped buttons."
+    }
+  }
+}
