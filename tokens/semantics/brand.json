@@ -1,0 +1,18 @@
+{
+  "color": {
+    "$type": "color",
+    "brand": {
+      "$description": "The brand ramp. Each brand file points these ten steps at the same steps of its own colour ramp, so with no brand the ramp is gray. The brand semantics in color.json and modes/dark.json read these steps; pages never do.",
+      "50": { "$value": "{color.gray.50}" },
+      "100": { "$value": "{color.gray.100}" },
+      "200": { "$value": "{color.gray.200}" },
+      "300": { "$value": "{color.gray.300}" },
+      "400": { "$value": "{color.gray.400}" },
+      "500": { "$value": "{color.gray.500}" },
+      "600": { "$value": "{color.gray.600}" },
+      "700": { "$value": "{color.gray.700}" },
+      "800": { "$value": "{color.gray.800}" },
+      "900": { "$value": "{color.gray.900}" }
+    }
+  }
+}

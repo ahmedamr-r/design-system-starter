@@ -22,12 +22,12 @@ This is a design token library. Token files are JSON in the W3C Design Tokens fo
 `npm run check` enforces part of the rules from here down. The last section says exactly which parts.
 
 1. **Primitives** (`tokens/primitives/`) hold raw values: colours, sizes, fonts. Named for what they are (`color.blue.600`), never for where they are used.
-2. **Semantics** (`tokens/semantics/`) name a job (`color.fill.brand`) and point at one primitive. They never hold a raw value.
+2. **Semantics** (`tokens/semantics/`) name a job (`color.fill.brand`) and point at one primitive, or at one step of the brand ramp. They never hold a raw value. The brand ramp, `color.brand.50` to `color.brand.900` in `tokens/semantics/brand.json`, is the one set of semantics that names no job: each step points at the gray step with the same number, so with no brand the ramp is gray. The brand semantics, such as `color.fill.brand` and `color.text.link`, point at its steps.
 3. **Components** (`tokens/components/<component>.json`) exist only for a component a brand restyles on its own, such as pill-shaped buttons in one brand. Each points at a semantic. Today that is Button alone.
-4. **Brands** (`tokens/brands/<name>.json`) re-point semantics at different primitives, and component tokens at different semantics. A brand adds no new tokens.
-5. **Modes** (`tokens/modes/dark.json`) re-point colour semantics at different primitives and never touch a primitive, so `color.gray.900` is the same colour in both modes. Dark answers every colour semantic, even where it is the same as light. Light is what the semantics hold, and dark is the only mode file: the build writes a semantic whose two answers differ as `light-dark(light, dark)`, and `data-mode` sets `color-scheme`, which picks one. `:root` has `light dark`, so a page that sets no mode follows the reader's setting.
+4. **Brands** (`tokens/brands/<name>.json`) point every step of the brand ramp at the same step of one primitive ramp, such as `color.brand.600` at `color.blue.600`, and set no other colour. Every brand semantic follows, in light and in dark. A brand may also re-point a component token that is not a colour, such as a button's radius, at a different semantic. A brand adds no new tokens.
+5. **Modes** (`tokens/modes/dark.json`) re-point colour semantics at different primitives or steps of the brand ramp, and never touch a primitive or a step of the ramp, so `color.gray.900` is the same colour in both modes and a brand's ramp is the same in both. Dark answers every colour semantic but the ramp's steps, even where it is the same as light. Light is what the semantics hold, and dark is the only mode file: the build writes a semantic whose two answers differ as `light-dark(light, dark)`, and `data-mode` sets `color-scheme`, which picks one. `:root` has `light dark`, so a page that sets no mode follows the reader's setting.
 
-Pages and components read semantics, or their own component tokens where those exist. Never a primitive, never a raw value. Before adding a component file, check whether a new semantic would do: a role every component can use beats a token only one can.
+Pages and components read semantics, or their own component tokens where those exist. Never a primitive, never a raw value. A page never reads a step of the brand ramp either: a step has no dark answer, so `color.brand.700` would stay dark on a dark page where `color.text.link` turns light. Before adding a component file, check whether a new semantic would do: a role every component can use beats a token only one can.
 
 An element with a `data-mode`, and every card, sets its own background and text colour from the semantics. A colour an element inherits was worked out on the ancestor that set it, in that ancestor's mode.
 
@@ -38,6 +38,7 @@ An element with a `data-mode`, and every card, sets its own background and text 
 - Roles: `surface`, `fill`, `text`, `border`.
 - Intent is any name for a job, such as `default`, `subtle`, `brand`, `on-fill`, `link`, `focus`.
 - A state is optional and comes last, such as `-hover` or `-subtle`.
+- The one exception is the brand ramp, `color.brand.<step>`, where the step is a number such as `600`. It holds steps, not jobs.
 
 Name the job, not the colour. `color.fill.brand`, never `color.fill.blue`.
 
@@ -50,15 +51,15 @@ A brand is one file in `tokens/brands/`. The build finds it there. Never add a b
 Each check fails with a plain message that names the file. They are numbered as in `scripts/check.js`.
 
 1. Colour values appear only in `tokens/primitives/`. No semantic, component or brand token holds one, and no CSS file in `demo/` does.
-2. Every semantic points at a primitive, and every component token at a semantic. A brand or mode token points at what the token it re-points would.
-3. The CSS in `demo/` reads no primitive.
-4. A brand file sets only semantic and component tokens that already exist.
+2. Every step of the brand ramp points at a primitive, every other semantic at a primitive or a step of the ramp, and every component token at a semantic. A brand or mode token points at what the token it re-points would.
+3. The CSS and HTML in `demo/` read no primitive and no step of the brand ramp.
+4. A brand file sets only semantic and component tokens that already exist. Its only colours are the steps of the brand ramp: it sets every step, each at the same step of one primitive ramp.
 5. In `dist/tokens.css`, every semantic and component token is still a `var()` reference, or `light-dark()` of two.
 6. In `dist/tokens.css`, semantic and component tokens are declared on `:root` and `[data-brand]`, before the brand blocks.
-7. Every semantic colour is named `color.<role>.<intent>`, with an optional `-<state>`, and its role is `surface`, `fill`, `text` or `border`. No word in the name is a ramp from `tokens/primitives/color.json`, and grey and gray count as the same word.
+7. Every semantic colour is named `color.<role>.<intent>`, with an optional `-<state>`, and its role is `surface`, `fill`, `text` or `border`. No word in the name is a ramp from `tokens/primitives/color.json`, and grey and gray count as the same word. The brand ramp, `color.brand.<step>` with a number for the step, is the one exception, and any other name under `color.brand` fails.
 8. No file in `scripts/` or `.github/`, and no config file at the root, contains a brand name as a whole word, in any letter case. The brand names are the file names in `tokens/brands/`. Root config files are dotfiles and `.json`, `.js`, `.mjs`, `.cjs`, `.ts`, `.yml`, `.yaml` and `.toml` files, except `package-lock.json`.
-9. A mode file sets only colour semantics that already exist. It holds no colour value and sets no primitive.
-10. Every colour semantic has an answer in `tokens/modes/dark.json`.
+9. A mode file sets only colour semantics that already exist. It holds no colour value, sets no primitive, and never touches a step of the brand ramp.
+10. Every colour semantic but the steps of the brand ramp has an answer in `tokens/modes/dark.json`.
 11. `tokens/modes/` holds no mode other than dark, since `light-dark()` has only a light answer and a dark one.
 12. The CSS and HTML in `demo/` read only variables that `dist/tokens.css` writes. The message suggests the closest name the demo may read.
 13. Every text and focus colour has a pair in `tokens/contrast-pairs.json`. They are each `color.text` semantic, `color.border.focus`, and any component token that points at one, such as `button.label`, whose pair also counts for the semantic it points at. Every token the file names exists.

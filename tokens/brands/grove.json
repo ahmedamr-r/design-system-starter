@@ -1,17 +1,17 @@
 {
   "color": {
     "$type": "color",
-    "fill": {
-      "brand": { "$value": "{color.green.600}" },
-      "brand-hover": { "$value": "{color.green.700}" },
-      "brand-subtle": { "$value": "{color.green.50}" }
-    },
-    "text": {
-      "brand": { "$value": "{color.green.700}" },
-      "link": { "$value": "{color.green.600}" }
-    },
-    "border": {
-      "focus": { "$value": "{color.green.600}" }
+    "brand": {
+      "50": { "$value": "{color.green.50}" },
+      "100": { "$value": "{color.green.100}" },
+      "200": { "$value": "{color.green.200}" },
+      "300": { "$value": "{color.green.300}" },
+      "400": { "$value": "{color.green.400}" },
+      "500": { "$value": "{color.green.500}" },
+      "600": { "$value": "{color.green.600}" },
+      "700": { "$value": "{color.green.700}" },
+      "800": { "$value": "{color.green.800}" },
+      "900": { "$value": "{color.green.900}" }
     }
   },
   "button": {

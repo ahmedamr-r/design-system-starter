@@ -47,6 +47,19 @@ const layeredNames = new Set([...semanticNames, ...componentNames]);
 
 const cssName = (path) => `--${path.replaceAll('.', '-')}`;
 const referenceIn = (value) => (typeof value === 'string' ? value.match(/^\{([^}]+)\}$/)?.[1] : undefined);
+// A token is a colour if it sits under color, or points at a colour token.
+const isColour = ({ path, value }) => path.startsWith('color.') || Boolean(referenceIn(value)?.startsWith('color.'));
+
+// The brand ramp: color.brand.<step>, where the step is a number such as 600.
+// Its steps are semantics, in tokens/semantics/brand.json, and each points at a
+// primitive. A brand file points every step at the same step of its own
+// primitive ramp, and the brand semantics, such as color.fill.brand, point at
+// steps, so a brand reaches all of them, in light and in dark, without
+// re-pointing any. The steps are not jobs: no mode answers them and the demo
+// never reads them.
+const RAMP_STEP = /^color\.brand\.(\d+)$/;
+const rampSteps = new Set([...semanticNames].filter((path) => RAMP_STEP.test(path)));
+const stepOf = (path) => path.match(RAMP_STEP)[1];
 
 // ---------------------------------------------------------------- reporting
 
@@ -89,33 +102,54 @@ check('Colour values appear only in tokens/primitives', [
   ),
 ]);
 
-// 2. Every token points one layer down: semantics at primitives, components at
-//    semantics. A brand or mode follows the rule of the token it re-points.
-const pointsDown = (token, below, belowName) => {
+// 2. Every token points one layer down: a step of the brand ramp at a
+//    primitive, any other semantic at a primitive or a step of the ramp, and a
+//    component token at a semantic. A brand or mode follows the rule of the
+//    token it re-points.
+const primitivesOrSteps = new Set([...primitiveNames, ...rampSteps]);
+const mayPointAt = (path) => {
+  if (componentNames.has(path)) return { allowed: semanticNames, what: 'a semantic token' };
+  if (rampSteps.has(path)) return { allowed: primitiveNames, what: 'a primitive token' };
+  return { allowed: primitivesOrSteps, what: 'a primitive token or a step of the brand ramp' };
+};
+const pointsDown = (token) => {
+  const { allowed, what } = mayPointAt(token.path);
   const target = referenceIn(token.value);
-  if (!target) return [`${token.file}: ${token.path} holds a value. It should point at a ${belowName} token.`];
-  if (!below.has(target)) return [`${token.file}: ${token.path} points at {${target}}, which is not a ${belowName} token.`];
+  if (!target) return [`${token.file}: ${token.path} holds a value. It should point at ${what}.`];
+  if (!allowed.has(target)) return [`${token.file}: ${token.path} points at {${target}}, which is not ${what}.`];
   return [];
 };
-check('Every token points one layer down', [
-  ...semantics.flatMap((token) => pointsDown(token, primitiveNames, 'primitive')),
-  ...components.flatMap((token) => pointsDown(token, semanticNames, 'semantic')),
-  ...[...brands, ...modes].flatMap((token) =>
-    componentNames.has(token.path)
-      ? pointsDown(token, semanticNames, 'semantic')
-      : pointsDown(token, primitiveNames, 'primitive'),
-  ),
-]);
+check('Every token points one layer down, or at a step of the brand ramp',
+  [...semantics, ...components, ...brands, ...modes].flatMap(pointsDown));
 
-// 3. The demo reads semantic tokens, never primitives.
+// 3. The demo reads semantic tokens, never a primitive and never a step of the
+//    brand ramp. A step has no dark answer: color.text.link turns lighter in
+//    dark, but a page that read color.brand.700 would stay dark on dark.
+//    Comments are blanked, not removed, so line numbers stay right.
 const primitiveCss = new Set([...primitiveNames].map(cssName));
-check('Demo CSS reads no primitives', demoCss.flatMap(({ file, text }) =>
-  [...text.matchAll(/var\((--[\w-]+)/g)]
-    .filter(([, name]) => primitiveCss.has(name))
-    .map(([, name]) => `${file} reads ${name}, a primitive. Use the semantic token for that job.`),
-));
+const rampCss = new Set([...rampSteps].map(cssName));
+const blank = (comment) => comment.replace(/[^\n]/g, ' ');
+const demoFiles = existsSync('demo')
+  ? readdirSync('demo')
+      .filter((file) => file.endsWith('.css') || file.endsWith('.html'))
+      .map((file) => ({
+        file: join('demo', file),
+        text: readFileSync(join('demo', file), 'utf8').replace(/\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->/g, blank),
+      }))
+  : [];
+const demoReads = demoFiles.flatMap(({ file, text }) =>
+  text.split('\n').flatMap((line, i) =>
+    [...line.matchAll(/var\(\s*(--[\w-]+)/g)].map(([, name]) => ({ file, line: i + 1, name }))));
+check('The demo reads no primitive and no step of the brand ramp', demoReads.flatMap(({ file, line, name }) => {
+  if (primitiveCss.has(name)) return [`${file}:${line} reads ${name}, a primitive. Use the semantic token for that job.`];
+  if (rampCss.has(name)) {
+    return [`${file}:${line} reads ${name}, a step of the brand ramp, which has no dark answer. Use the semantic token for that job, such as --color-fill-brand.`];
+  }
+  return [];
+}));
 
-// 4. A brand file only re-points tokens that exist.
+// 4. A brand file only re-points tokens that exist, and the only colours it
+//    sets are the steps of the brand ramp.
 function closest(word, options) {
   const distance = (a, b) => {
     const row = Array.from({ length: b.length + 1 }, (_, i) => i);
@@ -132,9 +166,50 @@ function closest(word, options) {
   };
   return [...options].sort((a, b) => distance(word, a) - distance(word, b))[0];
 }
-check('Brand files only set tokens that exist', brands
-  .filter(({ path }) => !layeredNames.has(path))
-  .map(({ path, file }) => `${file}: ${path} is not a semantic or component token. Did you mean ${closest(path, layeredNames)}?`));
+// A brand's only colours are the steps of the brand ramp: every step, each at
+// the same step of one primitive ramp, as color.brand.600 at {color.blue.600}.
+// The brand semantics read the steps, so they follow the brand without being
+// re-pointed, and each keeps the dark answer tokens/modes/dark.json gives it.
+const PRIMITIVE_STEP = /^color\.([^.]+)\.([^.]+)$/;
+const brandProblems = (file) => {
+  const own = brands.filter((token) => token.file === file);
+  const problems = [];
+  for (const token of own) {
+    const { path } = token;
+    if (!layeredNames.has(path)) {
+      problems.push(`${file}: ${path} is not a semantic or component token. Did you mean ${closest(path, layeredNames)}?`);
+    } else if (!rampSteps.has(path) && isColour(token)) {
+      problems.push(componentNames.has(path)
+        ? `${file}: ${path} is a colour, and a brand sets no colour but the brand ramp. ${path} follows the ramp through the semantic it reads in tokens/components/.`
+        : `${file}: ${path} is a colour, and a brand sets no colour but the brand ramp. Point ${path} at a step of the ramp in tokens/semantics/ for light and tokens/modes/dark.json for dark, and every brand reaches it.`);
+    }
+  }
+  const steps = own.filter(({ path }) => rampSteps.has(path));
+  const missing = [...rampSteps].filter((path) => !steps.some((token) => token.path === path));
+  if (missing.length > 0) {
+    problems.push(`${file} does not set ${missing.join(', ')}. A brand points every step of the brand ramp at the same step of one primitive ramp.`);
+  }
+  const rampsUsed = new Set();
+  for (const { path, value } of steps) {
+    const target = referenceIn(value);
+    if (!target || !primitiveNames.has(target)) continue; // Check 2 reports these.
+    const [, ramp, step] = target.match(PRIMITIVE_STEP) ?? [];
+    if (!ramp) {
+      problems.push(`${file}: ${path} points at {${target}}, which is not a step of a primitive colour ramp. Point it at {color.<ramp>.${stepOf(path)}}.`);
+      continue;
+    }
+    rampsUsed.add(ramp);
+    if (step !== stepOf(path)) {
+      problems.push(`${file}: ${path} points at {${target}}. Point it at the same step, {color.${ramp}.${stepOf(path)}}.`);
+    }
+  }
+  if (rampsUsed.size > 1) {
+    problems.push(`${file} points the brand ramp at more than one primitive ramp: ${[...rampsUsed].join(', ')}. Point every step at one.`);
+  }
+  return problems;
+};
+check('Brand files set only tokens that exist, and no colour but the brand ramp, step for step on one primitive ramp',
+  jsonFiles(join('tokens', 'brands')).flatMap(brandProblems));
 
 // 5 and 6 read the built CSS.
 if (!existsSync('dist/tokens.css')) {
@@ -179,7 +254,8 @@ check('Semantic and component tokens are declared on :root and [data-brand], bef
 // 7. A semantic colour is named color.<role>.<intent>, with an optional -state
 //    at the end, and names a job, not a colour. The colour words are the ramps
 //    in tokens/primitives/color.json, so a new ramp is covered once it is added.
-//    Grey and gray count as the same word.
+//    Grey and gray count as the same word. The brand ramp, color.brand.<step>,
+//    is the one colour semantic that names no job: its steps are numbers.
 const ROLES = ['surface', 'fill', 'text', 'border'];
 const sameWord = (word) => (word.toLowerCase() === 'grey' ? 'gray' : word.toLowerCase());
 const rampFile = join('tokens', 'primitives', 'color.json');
@@ -188,14 +264,15 @@ const ramps = new Set(
     .filter((key) => !key.startsWith('$'))
     .map(sameWord),
 );
-// A semantic is a colour if it sits under color, or points at a colour primitive.
-const isColour = ({ path, value }) => path.startsWith('color.') || Boolean(referenceIn(value)?.startsWith('color.'));
 check('Semantic colours are named color.<role>.<intent> after a job, not a colour', semantics
   .filter(isColour)
+  .filter(({ path }) => !rampSteps.has(path))
   .flatMap(({ path, file }) => {
     const [first, role, intent, ...extra] = path.split('.');
     const problems = [];
-    if (first !== 'color' || !intent || extra.length > 0 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(intent)) {
+    if (first === 'color' && role === 'brand') {
+      problems.push(`${file}: ${path} is under color.brand, which holds only the steps of the brand ramp, numbered like the primitive ramps, as in color.brand.600. Name a job color.<role>.<intent> instead, as in color.fill.brand.`);
+    } else if (first !== 'color' || !intent || extra.length > 0 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(intent)) {
       problems.push(`${file}: ${path} should be named color.<role>.<intent>, with an optional -state at the end, as in color.fill.brand-hover.`);
     } else if (!ROLES.includes(role)) {
       problems.push(`${file}: ${path} has the role "${role}". The role is surface, fill, text or border.`);
@@ -240,9 +317,10 @@ check('No script, workflow or root config file names a brand', brandNames.length
   ));
 
 // 9. A mode file re-points colour semantics that exist, and nothing else. It
-//    holds no colour value and sets no primitive, so color.gray.900 is the
-//    same colour in every mode.
-const colourSemantics = semantics.filter(isColour);
+//    holds no colour value, sets no primitive, so color.gray.900 is the same
+//    colour in every mode, and never touches the brand ramp: the brands set
+//    its steps, and a mode re-points the semantics that read them.
+const colourSemantics = semantics.filter(isColour).filter(({ path }) => !rampSteps.has(path));
 const colourSemanticNames = names(colourSemantics);
 check('Mode files only re-point colour semantics that exist', modes.flatMap(({ path, value, file }) => {
   const problems = [];
@@ -253,6 +331,8 @@ check('Mode files only re-point colour semantics that exist', modes.flatMap(({ p
     problems.push(`${file}: ${path} is a primitive. A mode re-points semantics and leaves primitives alone, so ${path} is the same colour in every mode.`);
   } else if (!semanticNames.has(path) && !componentNames.has(path)) {
     problems.push(`${file}: ${path} is not a token. Did you mean ${closest(path, colourSemanticNames)}?`);
+  } else if (rampSteps.has(path)) {
+    problems.push(`${file}: ${path} is a step of the brand ramp, which only the brands set. Re-point the semantic that reads it instead, such as color.text.link.`);
   } else if (!colourSemanticNames.has(path)) {
     problems.push(`${file}: ${path} is not a colour semantic. A mode re-points colour semantics only.`);
   }
@@ -261,7 +341,7 @@ check('Mode files only re-point colour semantics that exist', modes.flatMap(({ p
 
 // 10. Every colour semantic has an answer in tokens/modes/dark.json, even where
 //     dark is the same as light, so a colour semantic added later cannot be
-//     forgotten there.
+//     forgotten there. The steps of the brand ramp are not jobs, and get none.
 const DARK = join('tokens', 'modes', 'dark.json');
 const darkAnswers = names(modes.filter(({ file }) => file === DARK));
 check('Every colour semantic has an answer in tokens/modes/dark.json', !existsSync(DARK)
@@ -279,25 +359,13 @@ check('tokens/modes holds no mode other than dark', jsonFiles(join('tokens', 'mo
 
 // 12. The demo reads only variables dist/tokens.css writes, so a misspelt name
 //     fails here instead of quietly falling back to an inherited or default value. The
-//     suggestion leaves out primitives, which check 3 forbids the demo to read.
+//     suggestion leaves out primitives and the steps of the brand ramp, which
+//     check 3 forbids the demo to read.
 const written = new Set(blocks.flatMap(({ declarations }) => declarations.map(({ name }) => name)));
-const readable = [...written].filter((name) => !primitiveCss.has(name));
-// Comments are blanked, not removed, so line numbers stay right.
-const blank = (comment) => comment.replace(/[^\n]/g, ' ');
-const demoFiles = existsSync('demo')
-  ? readdirSync('demo')
-      .filter((file) => file.endsWith('.css') || file.endsWith('.html'))
-      .map((file) => ({
-        file: join('demo', file),
-        text: readFileSync(join('demo', file), 'utf8').replace(/\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->/g, blank),
-      }))
-  : [];
-check('The demo reads only variables the build writes', demoFiles.flatMap(({ file, text }) =>
-  text.split('\n').flatMap((line, i) =>
-    [...line.matchAll(/var\(\s*(--[\w-]+)/g)]
-      .filter(([, name]) => !written.has(name))
-      .map(([, name]) => `${file}:${i + 1} reads ${name}, which dist/tokens.css does not write. Did you mean ${closest(name, readable)}?`)),
-));
+const readable = [...written].filter((name) => !primitiveCss.has(name) && !rampCss.has(name));
+check('The demo reads only variables the build writes', demoReads
+  .filter(({ name }) => !written.has(name))
+  .map(({ file, line, name }) => `${file}:${line} reads ${name}, which dist/tokens.css does not write. Did you mean ${closest(name, readable)}?`));
 
 // 13 and 14 read tokens/contrast-pairs.json: each text and focus colour, the
 // surfaces and fills the demo puts it on, and the ratio it must reach there.
