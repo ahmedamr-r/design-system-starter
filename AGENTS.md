@@ -15,7 +15,7 @@ This is a design token library. Token files are JSON in the W3C Design Tokens fo
 - `tokens/primitives/`, `tokens/semantics/` and `tokens/components/` are the token layers.
 - `tokens/brands/`, `tokens/modes/` and `tokens/locales/` are the switches. Each holds one file per option, and each file re-points tokens that already exist. The README in each folder says which attribute picks its files.
 - `tokens/contrast-pairs.json` lists each text and focus colour, the surfaces and fills the demo puts it on, and the contrast ratio it must reach there.
-- `scripts/build.js` writes `dist/tokens.css`, and `scripts/check.js` checks the rules. A change to how either works is its own job. `scripts/lib/resolve.js` works out the colour a token comes to in `dist/tokens.css`, for any script that needs it.
+- `scripts/build.js` writes `dist/tokens.css`, and the list of brands it built: `dist/brands.json` and `dist/brands.d.ts`. `scripts/check.js` checks the rules. A change to how either works is its own job. `scripts/lib/resolve.js` works out the colour a token comes to in `dist/tokens.css`, for any script that needs it.
 
 ## What each layer may point at
 
@@ -44,7 +44,9 @@ Name the job, not the colour. `color.fill.brand`, never `color.fill.blue`.
 
 ## Brands
 
-A brand is one file in `tokens/brands/`. The build finds it there. Never add a brand name to any script, list or config.
+A brand is one file in `tokens/brands/`. The build finds it there. Never add a brand name to any script, list, config or demo file.
+
+Anything that needs the list of brands reads it from the build. `dist/brands.json` lists each brand the build wrote a block for, in file-name order, as `{ "id", "displayName", "hue" }`: the id is the file name, the display name is the id with a capital letter, and the hue is the primitive ramp its brand ramp points at, such as `blue`, or `null` when its steps point at more than one. `dist/brands.d.ts` has a `Brand` type listing the ids. A brand file that sets nothing is in neither. The demo builds its panels from `dist/brands.json`.
 
 A file whose name starts with an underscore is not a brand, to the build or the check. `tokens/brands/_template.json` is one: it lists every token a brand may set, each at its value with no brand and with a description of what it paints in light and in dark. A new brand starts as a copy of it. When brands should be able to set another token, add it to the template first.
 
@@ -59,7 +61,7 @@ Each check fails with a plain message that names the file. They are numbered as 
 5. In `dist/tokens.css`, every semantic and component token is still a `var()` reference, or `light-dark()` of two.
 6. In `dist/tokens.css`, semantic and component tokens are declared on `:root` and `[data-brand]`, before the brand blocks.
 7. Every semantic colour is named `color.<role>.<intent>`, with an optional `-<state>`, and its role is `surface`, `fill`, `text` or `border`. No word in the name is a ramp from `tokens/primitives/color.json`, and grey and gray count as the same word. The brand ramp, `color.brand.<step>` with a number for the step, is the one exception, and any other name under `color.brand` fails.
-8. No file in `scripts/` or `.github/`, and no config file at the root, contains a brand name as a whole word, in any letter case. The brand names are the file names in `tokens/brands/`, leaving out any that starts with an underscore. Root config files are dotfiles and `.json`, `.js`, `.mjs`, `.cjs`, `.ts`, `.yml`, `.yaml` and `.toml` files, except `package-lock.json`.
+8. No file in `scripts/`, `.github/` or `demo/`, and no config file at the root, contains a brand name as a whole word, in any letter case. The brand names are the file names in `tokens/brands/`, leaving out any that starts with an underscore. Root config files are dotfiles and `.json`, `.js`, `.mjs`, `.cjs`, `.ts`, `.yml`, `.yaml` and `.toml` files, except `package-lock.json`.
 9. A mode file sets only colour semantics that already exist. It holds no colour value, sets no primitive, and never touches a step of the brand ramp.
 10. Every colour semantic but the steps of the brand ramp has an answer in `tokens/modes/dark.json`.
 11. `tokens/modes/` holds no mode other than dark, since `light-dark()` has only a light answer and a dark one.

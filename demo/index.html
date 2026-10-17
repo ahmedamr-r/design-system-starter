@@ -6,151 +6,33 @@
     <title>Token demo</title>
     <link rel="stylesheet" href="../dist/tokens.css" />
     <link rel="stylesheet" href="demo.css" />
+    <script type="module" src="demo.js"></script>
   </head>
   <body>
-    <!-- The page sets no mode, so it follows the reader's setting. Every panel sets its own. -->
+    <!-- The page sets no mode, so it follows the reader's setting. Every panel sets its own.
+         demo.js fills this with panels for no brand and for each brand in dist/brands.json,
+         which npm run build writes from tokens/brands/, so this page names no brand. -->
     <main class="panels">
-      <section class="panel" data-brand="harbor" data-mode="light" aria-labelledby="harbor-light-label">
-        <h2 class="panel-label" id="harbor-light-label">Harbor, light</h2>
-        <article class="card">
-          <header class="card-head">
-            <h3 class="plan">Studio</h3>
-            <span class="tag">Most popular</span>
-          </header>
-          <p class="lede">For small teams that ship every week.</p>
-          <p class="price"><span class="amount">$24</span> per seat, per month</p>
-          <ul class="features">
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Unlimited projects and reviewers</li>
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>A shared component library</li>
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Review links with comments</li>
-          </ul>
-          <button class="button" type="button">Start a 14-day trial</button>
-          <a class="link" href="#">Compare plans</a>
-        </article>
-      </section>
-
-      <section class="panel" data-brand="harbor" data-mode="dark" aria-labelledby="harbor-dark-label">
-        <h2 class="panel-label" id="harbor-dark-label">Harbor, dark</h2>
-        <article class="card">
-          <header class="card-head">
-            <h3 class="plan">Studio</h3>
-            <span class="tag">Most popular</span>
-          </header>
-          <p class="lede">For small teams that ship every week.</p>
-          <p class="price"><span class="amount">$24</span> per seat, per month</p>
-          <ul class="features">
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Unlimited projects and reviewers</li>
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>A shared component library</li>
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Review links with comments</li>
-          </ul>
-          <button class="button" type="button">Start a 14-day trial</button>
-          <a class="link" href="#">Compare plans</a>
-        </article>
-      </section>
-
-      <section class="panel" data-brand="grove" data-mode="light" aria-labelledby="grove-light-label">
-        <h2 class="panel-label" id="grove-light-label">Grove, light</h2>
-        <article class="card">
-          <header class="card-head">
-            <h3 class="plan">Studio</h3>
-            <span class="tag">Most popular</span>
-          </header>
-          <p class="lede">For small teams that ship every week.</p>
-          <p class="price"><span class="amount">$24</span> per seat, per month</p>
-          <ul class="features">
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Unlimited projects and reviewers</li>
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>A shared component library</li>
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Review links with comments</li>
-          </ul>
-          <button class="button" type="button">Start a 14-day trial</button>
-          <a class="link" href="#">Compare plans</a>
-        </article>
-      </section>
-
-      <section class="panel" data-brand="grove" data-mode="dark" aria-labelledby="grove-dark-label">
-        <h2 class="panel-label" id="grove-dark-label">Grove, dark</h2>
-        <article class="card">
-          <header class="card-head">
-            <h3 class="plan">Studio</h3>
-            <span class="tag">Most popular</span>
-          </header>
-          <p class="lede">For small teams that ship every week.</p>
-          <p class="price"><span class="amount">$24</span> per seat, per month</p>
-          <ul class="features">
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Unlimited projects and reviewers</li>
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>A shared component library</li>
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Review links with comments</li>
-          </ul>
-          <button class="button" type="button">Start a 14-day trial</button>
-          <a class="link" href="#">Compare plans</a>
-        </article>
-      </section>
-
-      <!-- The cascade test: a Grove card inside a Harbor panel must come out green. -->
-      <section class="panel" data-brand="harbor" data-mode="light" aria-labelledby="nested-label">
-        <h2 class="panel-label" id="nested-label">Grove inside Harbor</h2>
-        <a class="link" href="#">A Harbor link, for comparison</a>
-        <article class="card" data-brand="grove">
-          <header class="card-head">
-            <h3 class="plan">Studio</h3>
-            <span class="tag">Most popular</span>
-          </header>
-          <p class="lede">For small teams that ship every week.</p>
-          <p class="price"><span class="amount">$24</span> per seat, per month</p>
-          <ul class="features">
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Unlimited projects and reviewers</li>
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>A shared component library</li>
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Review links with comments</li>
-          </ul>
-          <button class="button" type="button">Start a 14-day trial</button>
-          <a class="link" href="#">Compare plans</a>
-        </article>
-      </section>
-
-      <!-- The mode test: a Grove card with no data-mode inside a dark Harbor panel must come out green, and stay dark. -->
-      <section class="panel" data-brand="harbor" data-mode="dark" aria-labelledby="nested-dark-label">
-        <h2 class="panel-label" id="nested-dark-label">Grove inside dark Harbor</h2>
-        <a class="link" href="#">A Harbor link, for comparison</a>
-        <article class="card" data-brand="grove">
-          <header class="card-head">
-            <h3 class="plan">Studio</h3>
-            <span class="tag">Most popular</span>
-          </header>
-          <p class="lede">For small teams that ship every week.</p>
-          <p class="price"><span class="amount">$24</span> per seat, per month</p>
-          <ul class="features">
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Unlimited projects and reviewers</li>
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>A shared component library</li>
-            <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Review links with comments</li>
-          </ul>
-          <button class="button" type="button">Start a 14-day trial</button>
-          <a class="link" href="#">Compare plans</a>
-        </article>
-      </section>
-
-      <!-- The other way round: a dark panel inside a light Grove section must turn dark and keep Grove's green. -->
-      <section class="panel" data-brand="grove" data-mode="light" aria-labelledby="dark-in-grove-label">
-        <h2 class="panel-label" id="dark-in-grove-label">Dark inside Grove</h2>
-        <a class="link" href="#">A Grove link, for comparison</a>
-        <section class="panel" data-mode="dark" aria-labelledby="dark-in-grove-inner-label">
-          <h3 class="panel-label" id="dark-in-grove-inner-label">Dark panel, no brand of its own</h3>
-          <article class="card">
-            <header class="card-head">
-              <h4 class="plan">Studio</h4>
-              <span class="tag">Most popular</span>
-            </header>
-            <p class="lede">For small teams that ship every week.</p>
-            <p class="price"><span class="amount">$24</span> per seat, per month</p>
-            <ul class="features">
-              <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Unlimited projects and reviewers</li>
-              <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>A shared component library</li>
-              <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Review links with comments</li>
-            </ul>
-            <button class="button" type="button">Start a 14-day trial</button>
-            <a class="link" href="#">Compare plans</a>
-          </article>
-        </section>
-      </section>
+      <p class="panel-label">Building the panels from dist/brands.json. If this stays, run npm run demo, which builds the tokens and serves this page.</p>
     </main>
+
+    <!-- The card every panel shows. demo.js copies it, and sets data-brand on a copy where a case needs one. -->
+    <template id="card">
+      <article class="card">
+        <header class="card-head">
+          <h3 class="plan">Studio</h3>
+          <span class="tag">Most popular</span>
+        </header>
+        <p class="lede">For small teams that ship every week.</p>
+        <p class="price"><span class="amount">$24</span> per seat, per month</p>
+        <ul class="features">
+          <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Unlimited projects and reviewers</li>
+          <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>A shared component library</li>
+          <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg>Review links with comments</li>
+        </ul>
+        <button class="button" type="button">Start a 14-day trial</button>
+        <a class="link" href="#">Compare plans</a>
+      </article>
+    </template>
   </body>
 </html>

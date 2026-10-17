@@ -27,6 +27,11 @@
 //
 // Light is what the semantics hold, and dark.json is the only mode file the
 // build reads: light-dark() has two answers.
+//
+// Next to dist/tokens.css it writes the brands it built a block for, read from
+// the same folder: dist/brands.json lists each one's id, display name and hue,
+// and dist/brands.d.ts has a Brand type listing the ids. The demo builds its
+// panels from brands.json, so it names no brand either.
 import StyleDictionary from 'style-dictionary';
 import { usesReferences } from 'style-dictionary/utils';
 import { existsSync } from 'node:fs';
@@ -105,6 +110,19 @@ const brands = (await readdir('tokens/brands'))
   .map((file) => file.replace(/\.json$/, ''))
   .sort();
 
+// A brand's hue is the primitive ramp its brand ramp points at: blue for a
+// brand that points color.brand.600 at {color.blue.600}. Check 4 makes every
+// step point at the same ramp. A brand whose steps point at more than one, or
+// that sets no step, gets null, and npm run check says what is wrong with it.
+const STEP_TARGET = /^\{color\.([^.{}]+)\.[^.{}]+\}$/;
+const hueOf = (tokens) => {
+  const found = new Set(tokens
+    .filter(({ path }) => path.length === 3 && path[0] === 'color' && path[1] === 'brand')
+    .map((token) => String(token.original.$value).match(STEP_TARGET)?.[1] ?? null));
+  return found.size === 1 ? [...found][0] : null;
+};
+const hues = new Map();
+
 // Style Dictionary writes no file for a brand that sets nothing, and cannot
 // read an empty one at all, so those are set aside here instead of failing.
 const empty = [];
@@ -132,6 +150,7 @@ for (const brand of brands) {
     empty.push(brand);
     continue;
   }
+  hues.set(brand, hueOf(allTokens.filter((token) => token.isSource)));
   await sd.buildAllPlatforms();
 }
 const built = brands.filter((brand) => !empty.includes(brand));
@@ -152,8 +171,19 @@ await writeFile(
   `/* Built by scripts/build.js from tokens/. Do not edit by hand. */\n\n${[...blocks, ...schemes].join('\n')}`,
 );
 await rm(PARTS, { recursive: true });
-console.log(`Wrote dist/tokens.css with ${built.length} brands: ${built.join(', ')}`);
+
+// The brands with a block, in the same order. The display name is the id with
+// a capital letter. A brand that sets nothing is not listed: it has no block,
+// so a panel for it would only show no brand under its name.
+const list = built.map((id) => ({ id, displayName: id.charAt(0).toUpperCase() + id.slice(1), hue: hues.get(id) }));
+await writeFile('dist/brands.json', `${JSON.stringify(list, null, 2)}\n`);
+await writeFile(
+  'dist/brands.d.ts',
+  `// Built by scripts/build.js from tokens/brands/. Do not edit by hand.\n\nexport type Brand = ${built.length === 0 ? 'never' : built.map((id) => JSON.stringify(id)).join(' | ')};\n`,
+);
+
+console.log(`Wrote dist/tokens.css, dist/brands.json and dist/brands.d.ts with ${built.length} brands: ${built.join(', ')}`);
 for (const brand of empty) {
-  console.log(`Left out ${brand}: tokens/brands/${brand}.json sets nothing, so data-brand="${brand}" looks like no brand. npm run check lists what it needs.`);
+  console.log(`Left out ${brand}: tokens/brands/${brand}.json sets nothing, so data-brand="${brand}" looks like no brand and dist/brands.json does not list it. npm run check lists what it needs.`);
 }
 if (dark.size > 0) console.log(`Dark mode differs from light in ${paired.length} semantics: ${paired.join(', ')}`);

@@ -1,8 +1,8 @@
 // Checks the token rules that are easy to break and hard to see.
 // Run it after `npm run build`; it reads the token files, the demo's CSS and
-// HTML, dist/tokens.css, tokens/contrast-pairs.json, and the scripts, workflows
-// and config files that must not name a brand. It prints one line per check,
-// and exits with an error if any fail.
+// HTML, dist/tokens.css, tokens/contrast-pairs.json, and the scripts, workflows,
+// config files and demo files that must not name a brand. It prints one line
+// per check, and exits with an error if any fail.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { resolver } from './lib/resolve.js';
@@ -311,12 +311,13 @@ check('Semantic colours are named color.<role>.<intent> after a job, not a colou
     return problems;
   }));
 
-// 8. No script, workflow or root config file names a brand. The brand names are
-//    the file names in tokens/brands/, read the way the build reads them and
-//    leaving out any that starts with an underscore, so none is written here.
-//    Root config files are dotfiles such as .nvmrc and files such as
-//    package.json or vite.config.js. package-lock.json is left out: npm
-//    writes it, and it lists packages, not brands.
+// 8. No script, workflow, root config file or file in demo/ names a brand. The
+//    brand names are the file names in tokens/brands/, read the way the build
+//    reads them and leaving out any that starts with an underscore, so none is
+//    written here. Root config files are dotfiles such as .nvmrc and files such
+//    as package.json or vite.config.js. package-lock.json is left out: npm
+//    writes it, and it lists packages, not brands. The demo builds its panels
+//    from dist/brands.json, so it has no reason to name one either.
 const brandNames = existsSync(BRANDS)
   ? readdirSync(BRANDS)
       .filter((file) => file.endsWith('.json') && !file.startsWith('_'))
@@ -326,7 +327,7 @@ const filesIn = (dir) =>
   existsSync(dir)
     ? readdirSync(dir, { recursive: true })
         .map((file) => join(dir, file))
-        .filter((file) => statSync(file).isFile())
+        .filter((file) => basename(file) !== '.DS_Store' && statSync(file).isFile())
     : [];
 const CONFIG_ENDINGS = ['.json', '.js', '.mjs', '.cjs', '.ts', '.yml', '.yaml', '.toml'];
 const rootConfig = readdirSync('.')
@@ -336,12 +337,14 @@ const rootConfig = readdirSync('.')
 const escapeForRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // A whole word: no letter, digit or underscore right before or after it.
 const brandWord = new RegExp(`(?<!\\w)(?:${brandNames.map(escapeForRegExp).join('|')})(?!\\w)`, 'gi');
-check('No script, workflow or root config file names a brand', brandNames.length === 0 ? [] :
-  [...filesIn('scripts'), ...filesIn('.github'), ...rootConfig].flatMap((file) =>
+const inDemo = (file) => file.split(/[\\/]/)[0] === 'demo';
+check('No script, workflow, root config file or demo file names a brand', brandNames.length === 0 ? [] :
+  [...filesIn('scripts'), ...filesIn('.github'), ...rootConfig, ...filesIn('demo')].flatMap((file) =>
     readFileSync(file, 'utf8')
       .split('\n')
-      .flatMap((line, i) => [...line.matchAll(brandWord)].map(([name]) =>
-        `${file}:${i + 1} names the brand ${name}. Brands are the files in tokens/brands/, so read them from there instead.`)),
+      .flatMap((line, i) => [...line.matchAll(brandWord)].map(([name]) => inDemo(file)
+        ? `${file}:${i + 1} names the brand ${name}. Build the demo's panels from dist/brands.json, which npm run build writes from tokens/brands/, instead.`
+        : `${file}:${i + 1} names the brand ${name}. Brands are the files in tokens/brands/, so read them from there instead.`)),
   ));
 
 // 9. A mode file re-points colour semantics that exist, and nothing else. It
