@@ -216,3 +216,75 @@ body {
   outline: 2px solid var(--color-border-focus);
   outline-offset: 2px;
 }
+
+/* The status panels. Each status is a badge, then a notice under it. The
+   badge paints a solid fill and the notice a soft one, and each sets its own
+   text colour, the pairs tokens/contrast-pairs.json measures. Both start at
+   the start edge, so in Arabic they sit on the right. */
+.status {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-control-y);
+}
+
+.badge {
+  padding: var(--space-control-y) var(--space-stack);
+  border-radius: var(--radius-pill);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: 1;
+}
+
+.notice {
+  justify-self: stretch;
+  margin: 0;
+  padding: var(--space-control-y) var(--space-control-x);
+  border: 1px solid;
+  border-radius: var(--radius-control);
+  font-size: var(--type-label-size);
+}
+
+/* One pair of rules per status, each reading its own tokens. */
+[data-status="success"] > .badge {
+  background: var(--color-fill-success);
+  color: var(--color-text-on-success);
+}
+
+[data-status="success"] > .notice {
+  background: var(--color-fill-success-subtle);
+  color: var(--color-text-success);
+  border-color: var(--color-border-success);
+}
+
+[data-status="warning"] > .badge {
+  background: var(--color-fill-warning);
+  color: var(--color-text-on-warning);
+}
+
+[data-status="warning"] > .notice {
+  background: var(--color-fill-warning-subtle);
+  color: var(--color-text-warning);
+  border-color: var(--color-border-warning);
+}
+
+[data-status="critical"] > .badge {
+  background: var(--color-fill-critical);
+  color: var(--color-text-on-critical);
+}
+
+[data-status="critical"] > .notice {
+  background: var(--color-fill-critical-subtle);
+  color: var(--color-text-critical);
+  border-color: var(--color-border-critical);
+}
+
+[data-status="info"] > .badge {
+  background: var(--color-fill-info);
+  color: var(--color-text-on-info);
+}
+
+[data-status="info"] > .notice {
+  background: var(--color-fill-info-subtle);
+  color: var(--color-text-info);
+  border-color: var(--color-border-info);
+}

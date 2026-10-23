@@ -1,5 +1,5 @@
 {
-  "$description": "The words on the demo's card, one set per language, keyed by language code. English is the full set, and npm run check fails a language that is missing a string English has. A list, such as the features, has one string per item. No string writes a digit: the price and the trial length are data in demo/demo.js, formatted for each panel's language, and {days} marks where the trial length goes. npm run check fails a string with a digit in it.",
+  "$description": "The words on the demo's card and its status panels, one set per language, keyed by language code. English is the full set, and npm run check fails a language that is missing a string English has. A list, such as the features, has one string per item. No string writes a digit: the price and the trial length are data in demo/demo.js, formatted for each panel's language, and {days} marks where the trial length goes. npm run check fails a string with a digit in it.",
   "en": {
     "plans.studio.name": "Studio",
     "plans.studio.tag": "Most popular",
@@ -11,7 +11,15 @@
       "Review links with comments"
     ],
     "plans.studio.cta": "Start a {days}-day trial",
-    "card.compare": "Compare plans"
+    "card.compare": "Compare plans",
+    "status.success.badge": "Paid",
+    "status.success.message": "Your payment went through",
+    "status.warning.badge": "Due soon",
+    "status.warning.message": "Your trial ends in three days",
+    "status.critical.badge": "Failed",
+    "status.critical.message": "The card was declined",
+    "status.info.badge": "New",
+    "status.info.message": "Prices shown without tax"
   },
   "ar": {
     "plans.studio.name": "استوديو",
@@ -24,6 +32,14 @@
       "روابط مراجعة مع تعليقات"
     ],
     "plans.studio.cta": "ابدأ تجربة لمدة {days} يومًا",
-    "card.compare": "قارن الخطط"
+    "card.compare": "قارن الخطط",
+    "status.success.badge": "مدفوع",
+    "status.success.message": "اكتملت عملية الدفع",
+    "status.warning.badge": "يستحق قريبًا",
+    "status.warning.message": "تنتهي تجربتك بعد ثلاثة أيام",
+    "status.critical.badge": "فشل",
+    "status.critical.message": "رُفضت البطاقة",
+    "status.info.badge": "جديد",
+    "status.info.message": "الأسعار المعروضة لا تشمل الضريبة"
   }
 }

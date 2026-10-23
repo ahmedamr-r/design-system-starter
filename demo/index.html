@@ -43,5 +43,30 @@
         <a class="link" href="#" data-copy="card.compare"></a>
       </article>
     </template>
+
+    <!-- The status panels' card: for each status, a badge on its solid fill and a short notice on
+         its soft fill, inside its border. demo.css gives each data-status its own tokens, and
+         demo.js fills the words from copy.json, as for the card above. A brand never re-points a
+         status, so these come out the same colours in every brand's panel. -->
+    <template id="statuses">
+      <article class="card statuses">
+        <div class="status" data-status="success">
+          <span class="badge" data-copy="status.success.badge"></span>
+          <p class="notice" data-copy="status.success.message"></p>
+        </div>
+        <div class="status" data-status="warning">
+          <span class="badge" data-copy="status.warning.badge"></span>
+          <p class="notice" data-copy="status.warning.message"></p>
+        </div>
+        <div class="status" data-status="critical">
+          <span class="badge" data-copy="status.critical.badge"></span>
+          <p class="notice" data-copy="status.critical.message"></p>
+        </div>
+        <div class="status" data-status="info">
+          <span class="badge" data-copy="status.info.badge"></span>
+          <p class="notice" data-copy="status.info.message"></p>
+        </div>
+      </article>
+    </template>
   </body>
 </html>

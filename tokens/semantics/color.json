@@ -8,18 +8,38 @@
     "fill": {
       "brand": { "$value": "{color.brand.600}", "$description": "The main button: the one thing to press first." },
       "brand-hover": { "$value": "{color.brand.700}", "$description": "The main button under the pointer." },
-      "brand-subtle": { "$value": "{color.brand.50}", "$description": "Tags and soft highlights in the brand colour." }
+      "brand-subtle": { "$value": "{color.brand.50}", "$description": "Tags and soft highlights in the brand colour." },
+      "success": { "$value": "{color.green.600}", "$description": "A solid success badge, such as Paid. Status colours are the same in every brand." },
+      "success-subtle": { "$value": "{color.green.50}", "$description": "The soft fill behind a success notice." },
+      "warning": { "$value": "{color.yellow.200}", "$description": "A solid warning badge, such as Due soon. A light yellow, so the text on it is dark (color.text.on-warning)." },
+      "warning-subtle": { "$value": "{color.yellow.50}", "$description": "The soft fill behind a warning notice." },
+      "critical": { "$value": "{color.red.600}", "$description": "A solid critical badge, such as Failed." },
+      "critical-subtle": { "$value": "{color.red.50}", "$description": "The soft fill behind a critical notice." },
+      "info": { "$value": "{color.blue.600}", "$description": "A solid info badge, such as New." },
+      "info-subtle": { "$value": "{color.blue.50}", "$description": "The soft fill behind an info notice." }
     },
     "text": {
       "default": { "$value": "{color.gray.900}", "$description": "Titles and body text." },
       "subtle": { "$value": "{color.gray.600}", "$description": "Secondary text: captions, meta, hints." },
       "on-fill": { "$value": "{color.gray.0}", "$description": "Text on a brand fill." },
       "brand": { "$value": "{color.brand.700}", "$description": "Text on a subtle brand fill." },
-      "link": { "$value": "{color.brand.700}", "$description": "Links inside text." }
+      "link": { "$value": "{color.brand.700}", "$description": "Links inside text." },
+      "success": { "$value": "{color.green.700}", "$description": "Text on the soft success fill (color.fill.success-subtle)." },
+      "on-success": { "$value": "{color.gray.0}", "$description": "Text on the solid success fill (color.fill.success)." },
+      "warning": { "$value": "{color.yellow.700}", "$description": "Text on the soft warning fill (color.fill.warning-subtle)." },
+      "on-warning": { "$value": "{color.yellow.900}", "$description": "Text on the solid warning fill (color.fill.warning): dark, since that fill is a light yellow." },
+      "critical": { "$value": "{color.red.700}", "$description": "Text on the soft critical fill (color.fill.critical-subtle)." },
+      "on-critical": { "$value": "{color.gray.0}", "$description": "Text on the solid critical fill (color.fill.critical)." },
+      "info": { "$value": "{color.blue.700}", "$description": "Text on the soft info fill (color.fill.info-subtle)." },
+      "on-info": { "$value": "{color.gray.0}", "$description": "Text on the solid info fill (color.fill.info)." }
     },
     "border": {
       "default": { "$value": "{color.gray.200}", "$description": "Card edges and dividers." },
-      "focus": { "$value": "{color.brand.600}", "$description": "The keyboard focus ring." }
+      "focus": { "$value": "{color.brand.600}", "$description": "The keyboard focus ring." },
+      "success": { "$value": "{color.green.600}", "$description": "The edge of a success notice." },
+      "warning": { "$value": "{color.yellow.600}", "$description": "The edge of a warning notice." },
+      "critical": { "$value": "{color.red.600}", "$description": "The edge of a critical notice." },
+      "info": { "$value": "{color.blue.600}", "$description": "The edge of an info notice." }
     }
   }
 }

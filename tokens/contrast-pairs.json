@@ -1,5 +1,5 @@
 {
-  "$description": "Every text and focus-ring colour, each surface or fill the demo puts it on, and the contrast ratio it must reach there: 4.5 for text, 3 for the focus ring. npm run check measures each pair for every brand and for no brand, in light and in dark. Card borders and dividers are decorative and left out. The button is listed by its own tokens, the ones the demo reads, which also covers color.text.on-fill.",
+  "$description": "Every text and focus-ring colour, each surface or fill the demo puts it on, and the contrast ratio it must reach there: 4.5 for text, 3 for the focus ring. npm run check measures each pair for every brand and for no brand, in light and in dark. Card borders, dividers and the edges of status notices are decorative and left out. The button is listed by its own tokens, the ones the demo reads, which also covers color.text.on-fill.",
   "color.text.default": {
     "ratio": 4.5,
     "on": ["color.surface.page", "color.surface.default"],
@@ -29,5 +29,45 @@
     "ratio": 3,
     "on": ["color.surface.page", "color.surface.default"],
     "$description": "The ring sits 2px outside the link or button it marks, so it is drawn on the card or the page, not on the button's fill."
+  },
+  "color.text.success": {
+    "ratio": 4.5,
+    "on": ["color.fill.success-subtle"],
+    "$description": "The words of a success notice, on its soft fill."
+  },
+  "color.text.on-success": {
+    "ratio": 4.5,
+    "on": ["color.fill.success"],
+    "$description": "The words of a success badge, such as Paid, on its solid fill."
+  },
+  "color.text.warning": {
+    "ratio": 4.5,
+    "on": ["color.fill.warning-subtle"],
+    "$description": "The words of a warning notice, on its soft fill."
+  },
+  "color.text.on-warning": {
+    "ratio": 4.5,
+    "on": ["color.fill.warning"],
+    "$description": "The words of a warning badge, such as Due soon, on its solid fill."
+  },
+  "color.text.critical": {
+    "ratio": 4.5,
+    "on": ["color.fill.critical-subtle"],
+    "$description": "The words of a critical notice, on its soft fill."
+  },
+  "color.text.on-critical": {
+    "ratio": 4.5,
+    "on": ["color.fill.critical"],
+    "$description": "The words of a critical badge, such as Failed, on its solid fill."
+  },
+  "color.text.info": {
+    "ratio": 4.5,
+    "on": ["color.fill.info-subtle"],
+    "$description": "The words of an info notice, on its soft fill."
+  },
+  "color.text.on-info": {
+    "ratio": 4.5,
+    "on": ["color.fill.info"],
+    "$description": "The words of an info badge, such as New, on its solid fill."
   }
 }

@@ -11,6 +11,10 @@
 //   5. a dark panel with no brand inside a light panel of each brand;
 //   6. a card of each brand inside a light panel inside a dark one.
 //
+// Then the status panels, from the second <template>: 7. no brand, then each
+// brand, in light and in dark, each with a badge and a notice for every status.
+// A brand never re-points a status, so they come out the same in every brand.
+//
 // Each of those panels comes once for each language in copy.json: first in the
 // page's own language, the one on <html>, then right after it in each other
 // language. A panel in another language sets lang and dir, and the direction
@@ -26,6 +30,7 @@
 
 const main = document.querySelector('.panels');
 const template = document.querySelector('#card');
+const statusTemplate = document.querySelector('#statuses');
 
 // The page's own language, which the panel labels are written in.
 const pageLanguage = document.documentElement.lang;
@@ -177,6 +182,15 @@ function card({ brand, language, level = 3 }) {
   return cardCopy;
 }
 
+// A copy of the status card in a language: a badge and a notice for each
+// status, with their words from copy.json. Like the card, it sets no mode and
+// no language, so it takes both from the panel around it.
+function statusCard({ language }) {
+  const statusCopy = statusTemplate.content.firstElementChild.cloneNode(true);
+  fill(statusCopy, language);
+  return statusCopy;
+}
+
 // A link in the colours of the panel it sits in, to compare with the card. Its
 // words are the page's, like a label's.
 function link(text, language) {
@@ -239,6 +253,17 @@ for (const brand of brands) {
     { label: `${brand.displayName} inside light inside dark`, mode: 'dark', language },
     panel({ label: 'Light panel, no brand of its own', mode: 'light', language, level: 3 }, card({ brand, language, level: 4 })),
   ));
+}
+
+// 7. The status panels: no brand, then each brand, in light and in dark, from
+// the same list of brands as the panels above.
+for (const brand of [undefined, ...brands]) {
+  for (const mode of modes) {
+    cases.push((language) => panel(
+      { label: `Status, ${brand ? brand.displayName : 'no brand'}, ${mode}`, brand, mode, language },
+      statusCard({ language }),
+    ));
+  }
 }
 
 // Egyptian Arabic, for the light panel with no brand. It reads ar's words, but
