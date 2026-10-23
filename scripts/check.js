@@ -10,9 +10,12 @@
 // the icon names in the HTML, the demo's script, the CSS and the .svg files,
 // for any named left or right, and last demo/copy.json for digits and the
 // demo's HTML for a price typed in the price slot, then that demo/copy.json
-// still holds a language that reads right to left, and at the very end that
-// every focus style in the CSS keeps its outline and draws no box-shadow. It
-// prints one line per check, and exits with an error if any fail.
+// still holds a language that reads right to left, then that every focus
+// style in the CSS keeps its outline and draws no box-shadow, and at the very
+// end that every value in dist/tokens.css is one CSS can read. Check 12, that
+// the CSS reads only variables the build writes, reads the same CSS as the
+// side checks: every CSS file and the CSS in every HTML file. It prints one
+// line per check, and exits with an error if any fail.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { resolver } from './lib/resolve.js';
@@ -517,15 +520,87 @@ check('tokens/modes holds no mode other than dark', jsonFiles(join('tokens', 'mo
   .filter((file) => file !== DARK)
   .map((file) => `${file} is a mode other than dark. light-dark() has only a light answer and a dark one, and light is what the semantics already hold.`));
 
-// 12. The demo reads only variables dist/tokens.css writes, so a misspelt name
-//     fails here instead of quietly falling back to an inherited or default value. The
-//     suggestion leaves out primitives and the steps of the brand ramp, which
-//     check 3 forbids the demo to read.
+// Every CSS file in the repository, and the CSS inside each HTML file: its
+// <style> blocks and style attributes. Checks 12, 18, 20, 22, 23 and 26 read
+// it. node_modules is left out wherever it sits, and so are .git and the build
+// folders, dist/ and .vite-build/, since they are written from what is checked
+// here. In HTML everything but the CSS is blanked, and a style attribute's
+// quotes become braces, so the text keeps its length, every line number stays
+// right, and an attribute reads as one rule body. Comments are blanked too.
+const SKIPPED = new Set(['node_modules', '.git', 'dist', '.vite-build']);
+const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+  const path = dir === '.' ? entry.name : join(dir, entry.name);
+  if (entry.isDirectory()) return SKIPPED.has(entry.name) ? [] : walk(path);
+  return entry.isFile() ? [path] : [];
+});
+const STYLE_BLOCK = /(<style\b[^>]*>)([\s\S]*?)(<\/style\s*>)/gi;
+const STYLE_ATTRIBUTE = /(\sstyle\s*=\s*)("[^"]*"|'[^']*')/gi;
+const cssOfHtml = (html) => {
+  const text = html.replace(/<!--[\s\S]*?-->/g, blank);
+  const kept = text.replace(/[^\n]/g, ' ').split('');
+  const keep = (from, part) => part.split('').forEach((char, i) => { kept[from + i] = char; });
+  for (const { 1: open, 2: css, index } of text.matchAll(STYLE_BLOCK)) keep(index + open.length, css);
+  for (const { 1: name, 2: quoted, index } of text.matchAll(STYLE_ATTRIBUTE)) {
+    keep(index + name.length, `{${quoted.slice(1, -1)}}`);
+  }
+  return kept.join('');
+};
+const cssSources = walk('.')
+  .filter((file) => /\.(?:css|html?)$/i.test(file))
+  .map((file) => {
+    const raw = readFileSync(file, 'utf8');
+    const css = /\.css$/i.test(file) ? raw : cssOfHtml(raw);
+    return { file, text: css.replace(/\/\*[\s\S]*?\*\//g, blank) };
+  });
+const lineAt = (text, index) => text.slice(0, index).split('\n').length;
+
+// Every var() in a piece of CSS, as { name, fallback, index }. The fallback is
+// what comes after the first comma, up to the var()'s own closing bracket, or
+// undefined when there is no comma. A var() inside a fallback is found too,
+// on its own.
+const varsIn = (text) => [...text.matchAll(/\bvar\(\s*(--[\w-]+)/gi)].map(({ 0: open, 1: name, index }) => {
+  let depth = 1;
+  let at = index + open.length;
+  while (at < text.length && depth > 0) {
+    if (text[at] === '(') depth += 1;
+    if (text[at] === ')') depth -= 1;
+    at += 1;
+  }
+  const rest = text.slice(index + open.length, depth === 0 ? at - 1 : at).trim();
+  return { name, index, fallback: rest.startsWith(',') ? rest.slice(1).trim().replace(/\s+/g, ' ') : undefined };
+});
+// The custom properties a piece of CSS declares itself: --name: in a rule
+// body or a style attribute, and @property --name.
+const declaredIn = (text) => new Set([
+  ...[...text.matchAll(/(?:^|[{;\s])(--[\w-]+)\s*:/g)].map(([, name]) => name),
+  ...[...text.matchAll(/@property\s+(--[\w-]+)/gi)].map(([, name]) => name),
+]);
+
+// 12. The CSS reads only variables dist/tokens.css writes, or that the same
+//     file declares, so a misspelt name fails here instead of quietly falling
+//     back to an inherited or default value. It reads every CSS file and the
+//     CSS in every HTML file, the same CSS as check 18. A var() with a
+//     fallback, as in var(--color-text-default, black), counts too: the
+//     fallback hides the missing token, since the page shows the fallback and
+//     nothing looks wrong. The suggestion is the closest name the build writes
+//     or the file declares, leaving out primitives and the steps of the brand
+//     ramp, which a page never reads.
 const written = new Set(blocks.flatMap(({ declarations }) => declarations.map(({ name }) => name)));
 const readable = [...written].filter((name) => !primitiveCss.has(name) && !rampCss.has(name));
-check('The demo reads only variables the build writes', demoReads
-  .filter(({ name }) => !written.has(name))
-  .map(({ file, line, name }) => `${file}:${line} reads ${name}, which dist/tokens.css does not write. Did you mean ${closest(name, readable)}?`));
+const shorten = (text) => (text.length > 60 ? `${text.slice(0, 57)}...` : text);
+check('The CSS reads only variables the build writes or its own file declares, with or without a fallback', cssSources.flatMap(({ file, text }) => {
+  const declared = declaredIn(text);
+  return varsIn(text)
+    .filter(({ name }) => !written.has(name) && !declared.has(name))
+    .map(({ name, fallback, index }) => {
+      const where = `${file}:${lineAt(text, index)}`;
+      const suggestion = closest(name, [...readable, ...declared]);
+      if (fallback === undefined) {
+        return `${where} reads ${name}, which dist/tokens.css does not write and ${file} does not declare, so what it sets falls back to an inherited or default value. Did you mean ${suggestion}?`;
+      }
+      return `${where} reads ${name} with the fallback ${shorten(fallback) || '(nothing)'}, but dist/tokens.css does not write ${name} and ${file} does not declare it. The fallback hides the missing token: the page shows the fallback and nothing looks wrong. Did you mean ${suggestion}?`;
+    });
+}).sort((a, b) => a.localeCompare(b, 'en', { numeric: true })), { all: true });
 
 // 13 and 14 read tokens/contrast-pairs.json: each text and focus colour, the
 // surfaces and fills the demo puts it on, and the ratio it must reach there.
@@ -651,7 +726,6 @@ check(
 // way each language reads, so nothing types it. The demo's words live in
 // demo/copy.json, one set per language, and English is the full set.
 const directionOf = (language) => new Intl.Locale(language).getTextInfo().direction;
-const lineAt = (text, index) => text.slice(0, index).split('\n').length;
 
 // 15. Every element in the demo's HTML that has lang or dir has both, and its
 //     dir is the one Intl.Locale gives for its lang. Comments are blanked, as
@@ -754,39 +828,8 @@ check(`Every language in ${COPY} has every string English has`, copyProblems, { 
 // 18 and 19 keep left and right out. Flex, grid and logical properties such
 // as padding-inline-start follow dir, so one stylesheet works in both
 // directions, as long as nothing names a side or asks which way the page reads.
-
-// Every CSS file in the repository, and the CSS inside each HTML file: its
-// <style> blocks and style attributes. node_modules is left out wherever it
-// sits, and so are .git and the build folders, dist/ and .vite-build/, since
-// they are written from what is checked here. In HTML everything but the CSS
-// is blanked, and a style attribute's quotes become braces, so the text keeps
-// its length, every line number stays right, and an attribute reads as one
-// rule body.
-const SKIPPED = new Set(['node_modules', '.git', 'dist', '.vite-build']);
-const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-  const path = dir === '.' ? entry.name : join(dir, entry.name);
-  if (entry.isDirectory()) return SKIPPED.has(entry.name) ? [] : walk(path);
-  return entry.isFile() ? [path] : [];
-});
-const STYLE_BLOCK = /(<style\b[^>]*>)([\s\S]*?)(<\/style\s*>)/gi;
-const STYLE_ATTRIBUTE = /(\sstyle\s*=\s*)("[^"]*"|'[^']*')/gi;
-const cssOfHtml = (html) => {
-  const text = html.replace(/<!--[\s\S]*?-->/g, blank);
-  const kept = text.replace(/[^\n]/g, ' ').split('');
-  const keep = (from, part) => part.split('').forEach((char, i) => { kept[from + i] = char; });
-  for (const { 1: open, 2: css, index } of text.matchAll(STYLE_BLOCK)) keep(index + open.length, css);
-  for (const { 1: name, 2: quoted, index } of text.matchAll(STYLE_ATTRIBUTE)) {
-    keep(index + name.length, `{${quoted.slice(1, -1)}}`);
-  }
-  return kept.join('');
-};
-const cssSources = walk('.')
-  .filter((file) => /\.(?:css|html?)$/i.test(file))
-  .map((file) => {
-    const raw = readFileSync(file, 'utf8');
-    const css = /\.css$/i.test(file) ? raw : cssOfHtml(raw);
-    return { file, text: css.replace(/\/\*[\s\S]*?\*\//g, blank) };
-  });
+// They read cssSources, every CSS file and the CSS in every HTML file, read
+// before check 12, which reads it too.
 
 // Every declaration, as { file, line, property, value, rule }, with
 // !important dropped, and every selector or at-rule prelude, as
@@ -1261,6 +1304,38 @@ check('Every focus style keeps its outline, and none draws a ring with box-shado
     return [];
   })
   .sort((a, b) => a.localeCompare(b, 'en', { numeric: true })), { all: true });
+
+// 27. Every value in dist/tokens.css is one CSS can read. When a token holds
+//     something the build cannot turn into CSS, such as an object where it
+//     expected a string or a number, it writes JavaScript's words for it,
+//     undefined, null, NaN or [object Object], or nothing at all, and still
+//     finishes. A browser takes a custom property with any of these, so
+//     nothing fails until a page reads it: then the property that reads it is
+//     dropped and falls back to an inherited or default value, with no error
+//     anywhere. A reference in braces the build left as it was, such as
+//     {color.blue.600}, fails too. Words inside quotes, such as a font's name,
+//     do not count. Comments are blanked, so line numbers stay right. The
+//     message names the token files that set the token, so the fix goes there.
+const BUILT = 'dist/tokens.css';
+const builtText = readFileSync(BUILT, 'utf8').replace(/\/\*[\s\S]*?\*\//g, blank);
+const everyToken = [...primitives, ...semantics, ...components, ...brandFolder, ...modes, ...locales];
+const UNREADABLE = [
+  { pattern: /\[object [A-Za-z]+\]/, what: 'an object the build wrote as text' },
+  { pattern: /(?<![\w-])(?:undefined|null|NaN|-?Infinity)(?![\w-])/, what: 'a value that was missing, or not a number, when the build wrote it' },
+  { pattern: /[{}]/, what: 'a reference in braces the build did not resolve' },
+];
+check(`Every value in ${BUILT} is one CSS can read, never undefined, null, NaN, [object Object] or nothing`, [...builtText.matchAll(/(--[\w-]+)\s*:([^;]*);/g)]
+  .flatMap(({ 1: name, 2: raw, index }) => {
+    const value = raw.trim().replace(/\s+/g, ' ');
+    const unquoted = value.replace(/'[^']*'|"[^"]*"/g, '""');
+    const found = value === '' ? 'an empty value' : UNREADABLE.find(({ pattern }) => pattern.test(unquoted))?.what;
+    if (!found) return [];
+    const from = everyToken.filter(({ path }) => cssName(path) === name);
+    const source = from.length > 0
+      ? `It comes from ${from[0].path} in ${[...new Set(from.map(({ file }) => file))].join(', ')}: give it a value CSS can read there, such as a colour, a size or a reference to another token, then run npm run build.`
+      : 'No token file sets it, so scripts/build.js wrote it: fix it there.';
+    return [`${BUILT}:${lineAt(builtText, index)} writes ${name}: ${shorten(value) || '(nothing)'}, ${found}. Anything that reads var(${name}) drops that property and falls back to an inherited or default value, with no error anywhere. ${source}`];
+  }), { all: true });
 
 if (failed > 0) {
   console.log(`\n${failed} check${failed === 1 ? '' : 's'} failed.`);
