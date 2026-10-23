@@ -16,7 +16,8 @@
       "200": { "$value": { "value": 14, "unit": "px" } },
       "300": { "$value": { "value": 16, "unit": "px" } },
       "400": { "$value": { "value": 20, "unit": "px" } },
-      "500": { "$value": { "value": 24, "unit": "px" } }
+      "500": { "$value": { "value": 24, "unit": "px" } },
+      "600": { "$value": { "value": 32, "unit": "px" } }
     },
     "weight": {
       "$type": "fontWeight",
@@ -27,8 +28,16 @@
     "line-height": {
       "$type": "number",
       "$description": "Line heights as plain numbers, multiples of the font size, so each follows whatever size it is used with. Steps are named by the number times 100, so 150 is 1.5.",
+      "100": { "$value": 1 },
+      "120": { "$value": 1.2 },
       "150": { "$value": 1.5 },
       "170": { "$value": 1.7 }
+    },
+    "letter-spacing": {
+      "$type": "dimension",
+      "$description": "Space added between letters, in em, so each follows whatever size it is used with. Steps are named by the em value times 100, so minus-2 is -0.02em.",
+      "0": { "$value": { "value": 0, "unit": "em" } },
+      "minus-2": { "$value": { "value": -0.02, "unit": "em" } }
     }
   }
 }

@@ -16,22 +16,25 @@ body {
   font-size: var(--type-body-size);
   font-weight: var(--type-body-weight);
   line-height: var(--type-body-line-height);
+  letter-spacing: var(--type-body-letter-spacing);
 }
 
-/* A font family, weight or line height an element inherits was worked out on
-   the ancestor that set it, in that ancestor's language. The type tokens are
-   declared again on every element with a lang, and :lang() re-points them for
-   a locale, so each of these reads them itself: an Arabic panel gets the
-   Arabic family and 1.7, and an English label inside it gets the default type
-   back. The card does too, the way it sets its own colours, so its type is
+/* A font family, weight, line height or letter spacing an element inherits
+   was worked out on the ancestor that set it, in that ancestor's language. The
+   type tokens are declared again on every element with a lang, and :lang()
+   re-points them for a locale, so each of these reads them itself: an Arabic
+   panel gets the Arabic family, 1.7 and no letter spacing, and an English
+   label inside it gets the default type back. The card does too, the way it sets its own colours, so its type is
    right wherever it is put, not only where an ancestor read the tokens. Rules
-   further down that set their own weight, such as the labels', come later and
-   win. */
+   further down that read another role, such as the labels', come later and
+   win. Every rule below reads one role, display, title, body or label, and
+   all four of its parts: size, weight, line height and letter spacing. */
 .card,
 [lang] {
   font-family: var(--type-family);
   font-weight: var(--type-body-weight);
   line-height: var(--type-body-line-height);
+  letter-spacing: var(--type-body-letter-spacing);
 }
 
 .panels {
@@ -65,6 +68,8 @@ body {
   color: var(--color-text-subtle);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line-height);
+  letter-spacing: var(--type-label-letter-spacing);
 }
 
 /* Comes after [data-mode], so a card that sets a mode keeps the card surface. */
@@ -87,8 +92,10 @@ body {
 
 .plan {
   margin: 0;
-  font-size: var(--type-body-size);
+  font-size: var(--type-title-size);
   font-weight: var(--type-title-weight);
+  line-height: var(--type-title-line-height);
+  letter-spacing: var(--type-title-letter-spacing);
 }
 
 .tag {
@@ -99,27 +106,34 @@ body {
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
   line-height: 1;
+  letter-spacing: var(--type-label-letter-spacing);
 }
 
 .lede {
   margin: 0;
   color: var(--color-text-subtle);
-  font-size: var(--type-label-size);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-line-height);
+  letter-spacing: var(--type-body-letter-spacing);
 }
 
 .price {
   margin: var(--space-control-y) 0 0;
   color: var(--color-text-subtle);
-  font-size: var(--type-label-size);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-line-height);
+  letter-spacing: var(--type-body-letter-spacing);
 }
 
-/* A third larger than a title: the price is the one number on the card. */
+/* The price is the one number on the card, so it reads display. */
 .amount {
   color: var(--color-text-default);
-  font-size: calc(var(--type-title-size) * 4 / 3);
-  font-weight: var(--type-title-weight);
-  letter-spacing: -0.02em;
-  line-height: 1;
+  font-size: var(--type-display-size);
+  font-weight: var(--type-display-weight);
+  line-height: var(--type-display-line-height);
+  letter-spacing: var(--type-display-letter-spacing);
 }
 
 .features {
@@ -129,7 +143,10 @@ body {
   padding: var(--space-control-x) 0 0;
   border-top: 1px solid var(--color-border-default);
   list-style: none;
-  font-size: var(--type-label-size);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-line-height);
+  letter-spacing: var(--type-body-letter-spacing);
 }
 
 .features li {
@@ -166,10 +183,11 @@ body {
   border-radius: var(--button-radius);
   background: var(--button-background);
   color: var(--button-label);
-  font: inherit;
+  font-family: var(--type-family);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
-  line-height: var(--type-body-line-height);
+  line-height: var(--type-label-line-height);
+  letter-spacing: var(--type-label-letter-spacing);
   cursor: pointer;
 }
 
@@ -226,6 +244,8 @@ body {
   color: var(--color-text-link);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line-height);
+  letter-spacing: var(--type-label-letter-spacing);
 }
 
 .panel > .link {
@@ -279,6 +299,8 @@ body {
   color: var(--color-text-subtle);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line-height);
+  letter-spacing: var(--type-label-letter-spacing);
 }
 
 /* The status panels. Each status is a badge, then a notice under it. The
@@ -297,6 +319,7 @@ body {
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
   line-height: 1;
+  letter-spacing: var(--type-label-letter-spacing);
 }
 
 .notice {
@@ -305,7 +328,10 @@ body {
   padding: var(--space-control-y) var(--space-control-x);
   border: 1px solid;
   border-radius: var(--radius-control);
-  font-size: var(--type-label-size);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-line-height);
+  letter-spacing: var(--type-body-letter-spacing);
 }
 
 /* One pair of rules per status, each reading its own tokens. */

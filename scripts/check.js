@@ -11,11 +11,12 @@
 // for any named left or right, and last demo/copy.json for digits and the
 // demo's HTML for a price typed in the price slot, then that demo/copy.json
 // still holds a language that reads right to left, then that every focus
-// style in the CSS keeps its outline and draws no box-shadow, and at the very
-// end that every value in dist/tokens.css is one CSS can read. Check 12, that
-// the CSS reads only variables the build writes, reads the same CSS as the
-// side checks: every CSS file and the CSS in every HTML file. It prints one
-// line per check, and exits with an error if any fail.
+// style in the CSS keeps its outline and draws no box-shadow, then that every
+// value in dist/tokens.css is one CSS can read, and at the very end that every
+// type role has its four parts. Check 12, that the CSS reads only variables
+// the build writes, reads the same CSS as the side checks: every CSS file and
+// the CSS in every HTML file. It prints one line per check, and exits with an
+// error if any fail.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { resolver } from './lib/resolve.js';
@@ -1033,7 +1034,7 @@ check('No token\'s $description uses left or right for a side', descriptions.fla
 
 // 20. Every line height in the CSS reads a token, so a locale or a brand can
 //     re-point it. The one raw value is 1, for a single line set tight, such as
-//     a tag or a price. It reads the same CSS as check 18. A line-height token
+//     a tag or a badge. It reads the same CSS as check 18. A line-height token
 //     is a semantic or component token whose name ends in line-height, such as
 //     type.body.line-height; a primitive does not count, as everywhere else on
 //     a page. The font shorthand sets a line height too: after a slash, as in
@@ -1069,7 +1070,7 @@ const lineHeightProblem = (where, setting, value) => {
   if (read) {
     return [`${where} ${setting} with ${read}, which is not a line-height semantic. Read one that is: ${lineHeightList}.`];
   }
-  return [`${where} ${setting} to ${value} without reading a token. Read ${lineHeightList}, or use 1 for a single line set tight, such as a tag or a price.`];
+  return [`${where} ${setting} to ${value} without reading a token. Read ${lineHeightList}, or use 1 for a single line set tight, such as a tag or a badge.`];
 };
 check('Every line height in the CSS reads a token, or is 1', declarations.flatMap((declaration, at) => {
   const { file, line, property, value, rule } = declaration;
@@ -1336,6 +1337,42 @@ check(`Every value in ${BUILT} is one CSS can read, never undefined, null, NaN, 
       : 'No token file sets it, so scripts/build.js wrote it: fix it there.';
     return [`${BUILT}:${lineAt(builtText, index)} writes ${name}: ${shorten(value) || '(nothing)'}, ${found}. Anything that reads var(${name}) drops that property and falls back to an inherited or default value, with no error anywhere. ${source}`];
   }), { all: true });
+
+// 28. Every type role has its four parts. A role is a group under type in
+//     tokens/semantics/, such as type.display or type.label: everything there
+//     but type.family, which every role shares. Each role holds a size, a
+//     weight, a line-height and a letter-spacing, each a token of its own, so
+//     a page sets text by reading one role's four variables and never a font
+//     shorthand, and a locale can re-point any part. A role missing a part
+//     leaves whatever reads it to inherit that part from an ancestor, in that
+//     ancestor's role and language, with no error anywhere. A part with
+//     another name, such as letterSpacing, is reported with the name to use.
+const ROLE_PARTS = ['size', 'weight', 'line-height', 'letter-spacing'];
+const isToken = (node) => Boolean(node) && typeof node === 'object' && '$value' in node;
+const roleProblems = jsonFiles(join('tokens', 'semantics')).flatMap((file) => {
+  const text = readFileSync(file, 'utf8');
+  if (text.trim() === '') return [];
+  let type;
+  try {
+    type = JSON.parse(text).type;
+  } catch {
+    return []; // Not valid JSON; the build reports it.
+  }
+  if (!type || typeof type !== 'object') return [];
+  return Object.entries(type)
+    .filter(([role, node]) => !role.startsWith('$') && !isToken(node))
+    .flatMap(([role, node]) => {
+      const at = text.indexOf(`"${role}"`);
+      const where = at === -1 ? file : `${file}:${lineAt(text, at)}`;
+      const others = Object.keys(node ?? {}).filter((key) => !key.startsWith('$') && !ROLE_PARTS.includes(key));
+      return ROLE_PARTS.filter((part) => !isToken(node?.[part])).map((part) => {
+        const nearby = others.find((key) => closest(key, ROLE_PARTS) === part);
+        const fix = nearby ? `It has ${nearby}: name it ${part}.` : `Add type.${role}.${part}, pointing at a primitive under font.`;
+        return `${where} type.${role} has no ${part}. Every role has its own size, weight, line-height and letter-spacing, and shares type.family, so text that reads the role gets all four from it. ${fix}`;
+      });
+    });
+});
+check('Every type role has its own size, weight, line-height and letter-spacing', roleProblems, { all: true });
 
 if (failed > 0) {
   console.log(`\n${failed} check${failed === 1 ? '' : 's'} failed.`);

@@ -1,9 +1,22 @@
 {
-  "$description": "Arabic, picked by lang=\"ar\" or any Arabic code such as ar-EG. Arabic letters get IBM Plex Sans Arabic, and body text gets more room between lines, 1.7, for the dots and marks above and below the letters. Everything else keeps the default type.",
+  "$description": "Arabic, picked by lang=\"ar\" or any Arabic code such as ar-EG. Arabic letters get IBM Plex Sans Arabic, every role gets letter spacing 0, since added space pulls joined Arabic letters apart, and each role gets its own line height for the dots and marks above and below the letters: display 1.2, title 1.5, body 1.7 and label 1.7. Sizes and weights keep the default type.",
   "type": {
     "family": { "$value": "{font.family.arabic}" },
+    "display": {
+      "line-height": { "$value": "{font.line-height.120}" },
+      "letter-spacing": { "$value": "{font.letter-spacing.0}", "$description": "None in Arabic, in every role: added space pulls joined letters apart." }
+    },
+    "title": {
+      "line-height": { "$value": "{font.line-height.150}" },
+      "letter-spacing": { "$value": "{font.letter-spacing.0}" }
+    },
     "body": {
-      "line-height": { "$value": "{font.line-height.170}" }
+      "line-height": { "$value": "{font.line-height.170}" },
+      "letter-spacing": { "$value": "{font.letter-spacing.0}" }
+    },
+    "label": {
+      "line-height": { "$value": "{font.line-height.170}" },
+      "letter-spacing": { "$value": "{font.letter-spacing.0}" }
     }
   }
 }
