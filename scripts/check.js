@@ -6,8 +6,10 @@
 // file and the CSS in every HTML file outside node_modules and the build
 // folders, and each token's $description, for anything that names a side, and
 // that same CSS again for line heights that read no token, then the files in
-// tokens/locales/, and that same CSS once more for italics and capitals. It
-// prints one line per check, and exits with an error if any fail.
+// tokens/locales/, that same CSS once more for italics and capitals, and last
+// the icon names in the HTML, the demo's script, the CSS and the .svg files,
+// for any named left or right. It prints one line per check, and exits with an
+// error if any fail.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { resolver } from './lib/resolve.js';
@@ -697,13 +699,16 @@ const cssSources = walk('.')
 
 // Every declaration, as { file, line, property, value, rule }, with
 // !important dropped, and every selector or at-rule prelude, as
-// { file, line, prelude }. rule tells apart the rule bodies, so check 20 can
-// see what else the same rule sets.
+// { file, line, prelude, rule }. rule tells apart the rule bodies, so check 20
+// can see what else the same rule sets, and check 18 which declarations sit
+// under a selector: it is the file and where the rule's { is.
 const declarations = [];
 const preludes = [];
 for (const { file, text } of cssSources) {
   for (const { 1: prelude, index } of text.matchAll(/([^{};]*)\{/g)) {
-    if (prelude.trim() !== '') preludes.push({ file, line: lineAt(text, index + prelude.search(/\S/)), prelude: prelude.trim() });
+    if (prelude.trim() !== '') {
+      preludes.push({ file, line: lineAt(text, index + prelude.search(/\S/)), prelude: prelude.trim(), rule: `${file}@${index + prelude.length}` });
+    }
   }
   for (const { 1: body, index } of text.matchAll(/\{([^{}]*)\}/g)) {
     let at = index + 1;
@@ -796,26 +801,67 @@ const sideProblems = (declaration) => {
     problems.push(`${where} sets direction. The direction comes from the language: set lang and dir together in the HTML, and leave direction out of the CSS.`);
   }
   if (flips(declaration)) {
-    problems.push(`${where} flips something with a negative scale (${property}: ${value}). A mirrored shape is right for one direction only: draw it the way it should read, and place it with logical properties.`);
+    problems.push(`${where} flips something with a negative scale (${property}: ${value}). A mirrored shape is right for one direction only: draw it the way it should read, and place it with logical properties. ${ICON_HINT}`);
   }
   return problems;
 };
-const directionSelector = ({ file, line, prelude }) => {
+// The one exception: the icon rule. An icon that points somewhere is drawn for
+// a left-to-right language and named for where it leads, ending in -forward or
+// -back, and one rule turns every such icon around where the text reads right
+// to left, matched by its name:
+//
+//   [data-icon$="-forward"]:dir(rtl),
+//   [data-icon$="-back"]:dir(rtl) {
+//     scale: -1 1;
+//   }
+//
+// Its selectors are exactly those two, in either order, and it sets nothing
+// but the turn, scale: -1 1 or transform: scaleX(-1). The first such rule in
+// the CSS is the icon rule; any other rule that asks for the direction or
+// flips something fails, a second copy of the icon rule included.
+const ICON_SELECTOR = /^\[data-icon\$=(["'])-(forward|back)\1\]:dir\(rtl\)$/i;
+const ICON_RULE = '[data-icon$="-forward"]:dir(rtl), [data-icon$="-back"]:dir(rtl) { scale: -1 1; }';
+const isIconSelector = (prelude) => {
+  const ways = prelude.split(',').map((selector) => selector.replace(/\s+/g, '').match(ICON_SELECTOR)?.[2]?.toLowerCase());
+  return ways.length === 2 && ways.includes('forward') && ways.includes('back');
+};
+const isTurn = ({ property, value }) => {
+  const turn = value.toLowerCase().replace(/\s+/g, ' ');
+  return (property === 'scale' && turn === '-1 1') || (property === 'transform' && /^scalex\( ?-1 ?\)$/.test(turn));
+};
+const iconRule = preludes.find(({ prelude, rule }) => {
+  const body = declarations.filter((declaration) => declaration.rule === rule);
+  return isIconSelector(prelude) && body.length === 1 && isTurn(body[0]);
+});
+const iconRuleAt = iconRule && `${iconRule.file}:${iconRule.line}`;
+const inIconRule = ({ rule }) => rule === iconRule?.rule;
+const ICON_HINT = iconRule
+  ? `An icon that points somewhere turns around in the icon rule at ${iconRuleAt}: name it for where it leads, ending in -forward or -back.`
+  : `An icon that points somewhere turns around in one icon rule, matched by its name: ${ICON_RULE}`;
+
+const directionSelector = (selector) => {
+  if (inIconRule(selector)) return [];
+  const { file, line, prelude } = selector;
+  if (isIconSelector(prelude)) {
+    return [iconRule
+      ? `${file}:${line} is a second icon rule. The one at ${iconRuleAt} already turns every icon named -forward or -back around: delete this one.`
+      : `${file}:${line} matches the icons by name but sets more than the turn. The icon rule is ${ICON_RULE}, and nothing else goes in it.`];
+  }
   const problems = [];
   if (/\[\s*dir\b/i.test(prelude)) {
-    problems.push(`${file}:${line} checks the direction with [dir] in "${prelude}". Use logical properties, such as margin-inline-start, so one rule works in both directions.`);
+    problems.push(`${file}:${line} checks the direction with [dir] in "${prelude}". Use logical properties, such as margin-inline-start, so one rule works in both directions. ${ICON_HINT}`);
   }
   if (/:dir\(/i.test(prelude)) {
-    problems.push(`${file}:${line} checks the direction with :dir() in "${prelude}". Use logical properties, such as margin-inline-start, so one rule works in both directions.`);
+    problems.push(`${file}:${line} checks the direction with :dir() in "${prelude}". Use logical properties, such as margin-inline-start, so one rule works in both directions. ${ICON_HINT}`);
   }
   return problems;
 };
 
 // 18. No CSS names a side, sets the direction, asks for it with [dir] or
-//     :dir(), or mirrors something with a negative scale.
-check('No CSS names a side, sets or checks the direction, or flips with a negative scale', [
+//     :dir(), or mirrors something with a negative scale, but the icon rule.
+check('No CSS names a side, sets or checks the direction, or flips with a negative scale, but the one icon rule', [
   ...preludes.flatMap(directionSelector),
-  ...declarations.flatMap(sideProblems),
+  ...declarations.filter((declaration) => !inIconRule(declaration)).flatMap(sideProblems),
 ].sort((a, b) => a.localeCompare(b, 'en', { numeric: true })), { all: true });
 
 // 19. No token's $description uses left or right for a side. "Left out" is
@@ -961,6 +1007,59 @@ check('No CSS sets italics or capitals, so emphasis uses weight', declarations.f
   }
   return problems;
 }).sort((a, b) => a.localeCompare(b, 'en', { numeric: true })), { all: true });
+
+// 23. No icon is named for a side. An icon that points somewhere is named for
+//     where it leads, and its name ends in -forward or -back, so the icon rule
+//     in check 18 turns it around in a right-to-left language by its name
+//     alone. Left is back in English and forward in Arabic, so a name with
+//     left or right in it is wrong in one of them; and forward or back
+//     anywhere but at the end, as in forward-arrow, would never turn. The
+//     names are read from every data-icon in the HTML, with comments blanked,
+//     from data-icon in the demo's script, from [data-icon] in the CSS, and
+//     from the name of every .svg file, all in the same files check 18 reads.
+//     A name is split into words at hyphens, other punctuation and capitals,
+//     so arrowLeft and arrow_left count too.
+const ICON_ATTRIBUTE_SELECTOR = /\[\s*data-icon\s*[~|^$*]?=\s*(?:"([^"]*)"|'([^']*)'|([^\]\s]+))/gi;
+const iconNames = [
+  ...walk('.')
+    .filter((file) => /\.html?$/i.test(file))
+    .flatMap((file) => {
+      const text = readFileSync(file, 'utf8').replace(/<!--[\s\S]*?-->/g, blank);
+      return [...text.matchAll(TAG)].flatMap(({ 2: attributeText, index }) => [...attributeText.matchAll(ATTRIBUTE)]
+        .filter(([, key]) => key.toLowerCase() === 'data-icon')
+        .map(([, , double, single, bare]) => ({ where: `${file}:${lineAt(text, index)}`, name: double ?? single ?? bare ?? '' })));
+    }),
+  ...demoScripts.flatMap(({ file, text }) => [
+    ...text.matchAll(/\.dataset\.icon\s*=\s*(['"`])([^'"`]*)\1/g),
+    ...text.matchAll(/setAttribute\(\s*(['"`])data-icon\1\s*,\s*(['"`])([^'"`]*)\2/g),
+  ].map((match) => ({ where: `${file}:${lineAt(text, match.index)}`, name: match.at(-1) }))),
+  ...preludes.flatMap(({ file, line, prelude }) => [...prelude.matchAll(ICON_ATTRIBUTE_SELECTOR)]
+    .map(([, double, single, bare]) => ({ where: `${file}:${line}`, name: double ?? single ?? bare }))),
+  ...walk('.')
+    .filter((file) => /\.svg$/i.test(file))
+    .map((file) => ({ where: file, name: basename(file).replace(/\.svg$/i, '') })),
+];
+const wordsOf = (name) => name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+const WAY = { left: 'back', right: 'forward' };
+const iconNameProblem = ({ where, name }) => {
+  const words = wordsOf(name);
+  const sides = words.filter((word) => word in WAY);
+  const ways = words.filter((word) => word === 'forward' || word === 'back');
+  const rest = words.filter((word) => !(word in WAY) && word !== 'forward' && word !== 'back');
+  const named = (way) => `${rest.length > 0 ? rest.join('-') : 'arrow'}-${way}`;
+  if (sides.length > 0) {
+    const way = [...new Set(sides.map((side) => WAY[side]))];
+    const suggestion = way.length === 1 ? `call it ${named(way[0])}` : 'name it for what it does, since it points both ways and never turns around';
+    return [`${where} names an icon "${name}", after a side. Left is back in English and forward in Arabic, so name an icon for where it leads, not which side it points to: ${suggestion}. The icon rule turns every name ending in -forward or -back around in a right-to-left language.`];
+  }
+  if (ways.length > 0 && !(ways.length === 1 && new RegExp(`-${ways[0]}$`).test(name))) {
+    return [`${where} names an icon "${name}". The icon rule turns an icon around only when its name ends in -forward or -back, so this one would never turn: call it ${named(ways.at(-1))}.`];
+  }
+  return [];
+};
+check('No icon is named left or right, and every name with forward or back ends in it', iconNames
+  .flatMap(iconNameProblem)
+  .sort((a, b) => a.localeCompare(b, 'en', { numeric: true })), { all: true });
 
 if (failed > 0) {
   console.log(`\n${failed} check${failed === 1 ? '' : 's'} failed.`);

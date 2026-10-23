@@ -153,7 +153,13 @@ body {
   stroke-linejoin: round;
 }
 
+/* The label, then its arrow, centred together. The gap follows dir, so the
+   arrow comes after the words in either direction. */
 .button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-control-y);
   margin-top: var(--space-control-y);
   padding: var(--space-control-y) var(--space-control-x);
   border: 0;
@@ -169,6 +175,29 @@ body {
 
 .button:hover {
   background: var(--button-background-hover);
+}
+
+/* A line icon at the size of the words beside it, drawn in their colour. */
+.icon {
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The one rule that asks which way the text reads. An icon that points
+   somewhere is drawn for English and named for where it leads, ending in
+   -forward or -back, so in a right-to-left language it turns around, matched
+   by its name alone. :dir() reads the direction from the nearest dir, so no
+   page and no script has to check it. npm run check fails any other CSS that
+   asks for the direction or flips something, and any icon named left or right. */
+[data-icon$="-forward"]:dir(rtl),
+[data-icon$="-back"]:dir(rtl) {
+  scale: -1 1;
 }
 
 .link {

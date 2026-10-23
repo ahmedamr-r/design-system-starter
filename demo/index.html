@@ -19,7 +19,8 @@
 
     <!-- The card every panel shows. demo.js copies it, and sets data-brand on a copy where a case needs one.
          Its words are in copy.json: demo.js puts the string named by each data-copy in the panel's
-         language, and gives a list one item per string, each with the tick. The price is typed here for now. -->
+         language, and gives a list one item per string, each with the tick. The button's label has a span
+         of its own, so filling it in keeps the arrow after it. The price is typed here for now. -->
     <template id="card">
       <article class="card">
         <header class="card-head">
@@ -31,7 +32,12 @@
         <ul class="features" data-copy="plans.studio.features">
           <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg></li>
         </ul>
-        <button class="button" type="button" data-copy="plans.studio.cta"></button>
+        <!-- The arrow is drawn pointing forward in English and named for where it leads, not for
+             a side: demo.css turns every icon whose name ends in -forward or -back around in Arabic. -->
+        <button class="button" type="button">
+          <span data-copy="plans.studio.cta"></span>
+          <svg class="icon" data-icon="arrow-forward" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h10M9 4l4 4-4 4" /></svg>
+        </button>
         <a class="link" href="#" data-copy="card.compare"></a>
       </article>
     </template>
