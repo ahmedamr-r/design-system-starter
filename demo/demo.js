@@ -15,6 +15,11 @@
 // brand, in light and in dark, each with a badge and a notice for every status.
 // A brand never re-points a status, so they come out the same in every brand.
 //
+// Last the states panels: 8. the card's main button at rest, under the
+// pointer, pressed and disabled, side by side, for no brand and each brand, in
+// light and in dark. The names of the states are the demo's own labels, like
+// the panel labels, so they stay in the page's language.
+//
 // Each of those panels comes once for each language in copy.json: first in the
 // page's own language, the one on <html>, then right after it in each other
 // language. A panel in another language sets lang and dir, and the direction
@@ -116,11 +121,11 @@ const inOtherLanguage = (language) => language !== pageLanguage;
 // given. level is the heading's level: 2 for a panel on the page, 3 for one
 // inside another. A panel in another language sets its lang and dir, its
 // label keeps the page's, and a panel on the page names its language in the
-// label.
+// label. A wide panel takes the whole width of the page.
 let headings = 0;
-function panel({ label, brand, mode, language, level = 2 }, ...children) {
+function panel({ label, brand, mode, language, level = 2, wide = false }, ...children) {
   const section = document.createElement('section');
-  section.className = 'panel';
+  section.className = wide ? 'panel wide' : 'panel';
   if (brand) section.dataset.brand = brand.id;
   if (mode) section.dataset.mode = mode;
   const heading = document.createElement(`h${level}`);
@@ -189,6 +194,47 @@ function statusCard({ language }) {
   const statusCopy = statusTemplate.content.firstElementChild.cloneNode(true);
   fill(statusCopy, language);
   return statusCopy;
+}
+
+// The card's main button in each of its states. hover and pressed are shown
+// with data-state, which demo.css paints the same as the pointer would, and
+// disabled is the real attribute. The labels are the demo's own words, in the
+// page's language.
+const buttonStates = [
+  { label: 'At rest' },
+  { label: 'Hover', state: 'hover' },
+  { label: 'Pressed', state: 'pressed' },
+  { label: 'Disabled', disabled: true },
+];
+
+// A card with the main button once per state, side by side, each under its
+// label. Each button is a copy of the card's, with its words from copy.json and
+// its arrow, and is described by its label. Inside a panel in another language
+// the labels set the page's lang and dir again, as the panel labels do.
+let stateLabels = 0;
+function statesCard({ language }) {
+  const article = document.createElement('article');
+  article.className = 'card';
+  const list = document.createElement('ul');
+  list.className = 'states';
+  for (const { label, state, disabled } of buttonStates) {
+    const item = document.createElement('li');
+    item.className = 'state';
+    const name = document.createElement('span');
+    name.className = 'state-label';
+    name.id = `state-label-${++stateLabels}`;
+    name.textContent = label;
+    if (inOtherLanguage(language)) setLanguage(name, pageLanguage);
+    const button = template.content.querySelector('.button').cloneNode(true);
+    fill(button, language);
+    if (state) button.dataset.state = state;
+    button.disabled = Boolean(disabled);
+    button.setAttribute('aria-describedby', name.id);
+    item.append(name, button);
+    list.append(item);
+  }
+  article.append(list);
+  return article;
 }
 
 // A link in the colours of the panel it sits in, to compare with the card. Its
@@ -262,6 +308,17 @@ for (const brand of [undefined, ...brands]) {
     cases.push((language) => panel(
       { label: `Status, ${brand ? brand.displayName : 'no brand'}, ${mode}`, brand, mode, language },
       statusCard({ language }),
+    ));
+  }
+}
+
+// 8. The states panels: the main button at rest, under the pointer, pressed
+// and disabled, for no brand, then each brand, in light and in dark.
+for (const brand of [undefined, ...brands]) {
+  for (const mode of modes) {
+    cases.push((language) => panel(
+      { label: `Button states, ${brand ? brand.displayName : 'no brand'}, ${mode}`, brand, mode, language, wide: true },
+      statesCard({ language }),
     ));
   }
 }

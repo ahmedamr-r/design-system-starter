@@ -37,7 +37,7 @@
       },
       "800": {
         "$value": "{color.gray.800}",
-        "$description": "Light: nothing. Dark: the fill behind tags and soft highlights (color.fill.brand-subtle)."
+        "$description": "Light: the main button while it is pressed (color.fill.brand-pressed). Dark: the main button while it is pressed (color.fill.brand-pressed) and the fill behind tags and soft highlights (color.fill.brand-subtle)."
       },
       "900": {
         "$value": "{color.gray.900}",

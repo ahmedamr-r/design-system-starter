@@ -336,25 +336,108 @@ const ramps = new Set(
     .filter((key) => !key.startsWith('$'))
     .map(sameWord),
 );
-check('Semantic colours are named color.<role>.<intent> after a job, not a colour', semantics
-  .filter(isColour)
-  .filter(({ path }) => !rampSteps.has(path))
-  .flatMap(({ path, file }) => {
-    const [first, role, intent, ...extra] = path.split('.');
-    const problems = [];
-    if (first === 'color' && role === 'brand') {
-      problems.push(`${file}: ${path} is under color.brand, which holds only the steps of the brand ramp, numbered like the primitive ramps, as in color.brand.600. Name a job color.<role>.<intent> instead, as in color.fill.brand.`);
-    } else if (first !== 'color' || !intent || extra.length > 0 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(intent)) {
-      problems.push(`${file}: ${path} should be named color.<role>.<intent>, with an optional -state at the end, as in color.fill.brand-hover.`);
-    } else if (!ROLES.includes(role)) {
-      problems.push(`${file}: ${path} has the role "${role}". The role is surface, fill, text or border.`);
+//
+//    A state comes from one short list and goes at the end: -hover, -pressed,
+//    -selected or -disabled. -subtle, the soft version of a fill or a text,
+//    is kept too. Disabled replaces the intent, as in color.fill.disabled,
+//    since a control that cannot be used looks the same whatever it would have
+//    done. Any other state word fails with the one to use instead, read from
+//    STATE_WORDS. That list holds the common ones, not every word there is.
+//    Component colour tokens, such as button.background-hover, are held to
+//    the state words too.
+const STATES = ['hover', 'pressed', 'selected', 'disabled'];
+// Each word that is not a state, and what to do instead: use names the state
+// that takes its place in the name, and an entry with no use leaves the word
+// out, since the name without a state is the control at rest.
+const pressed = { use: 'pressed' };
+const hover = { use: 'hover' };
+const selected = { use: 'selected' };
+const disabled = { use: 'disabled' };
+const atRest = { advice: 'Leave it out: the name without a state is the control at rest.' };
+const focused = { advice: 'Leave it out: a focused control keeps its colours and shows the ring, color.border.focus.' };
+const STATE_WORDS = {
+  active: { use: 'pressed', advice: 'Use -pressed instead, or -selected for the current tab or item.' },
+  down: pressed,
+  press: pressed,
+  pressing: pressed,
+  click: pressed,
+  clicked: pressed,
+  pushed: pressed,
+  tapped: pressed,
+  hovered: hover,
+  hovering: hover,
+  over: hover,
+  mouseover: hover,
+  checked: selected,
+  current: selected,
+  chosen: selected,
+  picked: selected,
+  toggled: selected,
+  inactive: disabled,
+  unavailable: disabled,
+  dimmed: disabled,
+  rest: atRest,
+  resting: atRest,
+  idle: atRest,
+  normal: atRest,
+  enabled: atRest,
+  focus: focused,
+  focused,
+};
+// The last part of a name, with one word swapped for another, or left out.
+const withWords = (path, words) => {
+  const parts = path.split('.');
+  parts.pop();
+  return words.length > 0 ? [...parts, words.join('-')].join('.') : undefined;
+};
+// focus on its own is a job, the ring's colour, as in color.border.focus.
+const stateWordProblems = ({ path, file }) => {
+  const words = path.split('.').at(-1).split('-');
+  return words
+    .filter((word) => Object.hasOwn(STATE_WORDS, word) && !(word === 'focus' && words.length === 1))
+    .map((word) => {
+      const { use, advice = `Use -${use} instead.` } = STATE_WORDS[word];
+      const name = withWords(path, words.flatMap((each) => (each !== word ? [each] : use ? [use] : [])));
+      return `${file}: ${path} uses the state word "${word}". The states are -${STATES.join(', -')}, with -subtle kept for soft fills and text. ${advice}${name ? ` Call it ${name}.` : ''}`;
+    });
+};
+// Disabled replaces the intent, and every other state comes last.
+const stateOrderProblems = ({ path, file }) => {
+  const [, role, intent = ''] = path.split('.');
+  const words = intent.split('-');
+  const problems = [];
+  if (words.length > 1 && words.includes('disabled')) {
+    problems.push(`${file}: ${path} adds -disabled to an intent. Disabled replaces the intent, since a control that cannot be used looks the same whatever it would have done. Call it color.${role}.disabled.`);
+  }
+  for (const state of ['hover', 'pressed', 'selected']) {
+    if (words.slice(0, -1).includes(state)) {
+      problems.push(`${file}: ${path} puts -${state} before the end. A state comes last: call it ${withWords(path, [...words.filter((word) => word !== state), state])}.`);
     }
-    const colourWords = new Set(path.split(/[.-]/).filter((word) => ramps.has(sameWord(word))));
-    for (const word of colourWords) {
-      problems.push(`${file}: ${path} names the colour ${word}. Name the job it does instead, as in color.fill.brand.`);
-    }
-    return problems;
-  }));
+  }
+  return problems;
+};
+check('Semantic colours are named color.<role>.<intent> after a job, not a colour, with a state from -hover, -pressed, -selected and -disabled', [
+  ...components.filter(isColour).flatMap(stateWordProblems),
+  ...semantics
+    .filter(isColour)
+    .filter(({ path }) => !rampSteps.has(path))
+    .flatMap(({ path, file }) => {
+      const [first, role, intent, ...extra] = path.split('.');
+      const problems = [...stateWordProblems({ path, file }), ...stateOrderProblems({ path, file })];
+      if (first === 'color' && role === 'brand') {
+        problems.push(`${file}: ${path} is under color.brand, which holds only the steps of the brand ramp, numbered like the primitive ramps, as in color.brand.600. Name a job color.<role>.<intent> instead, as in color.fill.brand.`);
+      } else if (first !== 'color' || !intent || extra.length > 0 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(intent)) {
+        problems.push(`${file}: ${path} should be named color.<role>.<intent>, with an optional -state at the end, as in color.fill.brand-hover.`);
+      } else if (!ROLES.includes(role)) {
+        problems.push(`${file}: ${path} has the role "${role}". The role is surface, fill, text or border.`);
+      }
+      const colourWords = new Set(path.split(/[.-]/).filter((word) => ramps.has(sameWord(word))));
+      for (const word of colourWords) {
+        problems.push(`${file}: ${path} names the colour ${word}. Name the job it does instead, as in color.fill.brand.`);
+      }
+      return problems;
+    }),
+], { all: true });
 
 // 8. No script, workflow, root config file or file in demo/ names a brand. The
 //    brand names are the file names in tokens/brands/, read the way the build
@@ -531,9 +614,14 @@ for (const context of contexts) {
 
 // 13. Every text and focus colour has a pair. They are the color.text and
 //     color.border.focus semantics, and any component token that points at
-//     one of them, such as button.label.
+//     one of them, such as button.label. Disabled text, color.text.disabled,
+//     needs none: WCAG sets no contrast minimum for a control that cannot be
+//     used, its text and edges included, so it has no ratio to reach.
 const TEXT_OR_FOCUS = /^color\.(?:text\.|border\.focus(?:-|$))/;
-const textOrFocusSemantics = new Set(colourSemantics.map(({ path }) => path).filter((path) => TEXT_OR_FOCUS.test(path)));
+const DISABLED = /\.(?:[\w-]+-)?disabled$/;
+const textOrFocusSemantics = new Set(colourSemantics
+  .map(({ path }) => path)
+  .filter((path) => TEXT_OR_FOCUS.test(path) && !DISABLED.test(path)));
 const textOrFocus = [
   ...textOrFocusSemantics,
   ...components.filter(({ value }) => textOrFocusSemantics.has(referenceIn(value))).map(({ path }) => path),

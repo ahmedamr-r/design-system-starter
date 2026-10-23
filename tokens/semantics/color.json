@@ -8,6 +8,7 @@
     "fill": {
       "brand": { "$value": "{color.brand.600}", "$description": "The main button: the one thing to press first." },
       "brand-hover": { "$value": "{color.brand.700}", "$description": "The main button under the pointer." },
+      "brand-pressed": { "$value": "{color.brand.800}", "$description": "The main button while it is pressed, a step darker than under the pointer." },
       "brand-subtle": { "$value": "{color.brand.50}", "$description": "Tags and soft highlights in the brand colour." },
       "success": { "$value": "{color.green.600}", "$description": "A solid success badge, such as Paid. Status colours are the same in every brand." },
       "success-subtle": { "$value": "{color.green.50}", "$description": "The soft fill behind a success notice." },
@@ -16,7 +17,8 @@
       "critical": { "$value": "{color.red.600}", "$description": "A solid critical badge, such as Failed." },
       "critical-subtle": { "$value": "{color.red.50}", "$description": "The soft fill behind a critical notice." },
       "info": { "$value": "{color.blue.600}", "$description": "A solid info badge, such as New." },
-      "info-subtle": { "$value": "{color.blue.50}", "$description": "The soft fill behind an info notice." }
+      "info-subtle": { "$value": "{color.blue.50}", "$description": "The soft fill behind an info notice." },
+      "disabled": { "$value": "{color.gray.100}", "$description": "Any control that cannot be used, whatever it would have done: a disabled control loses its intent, so it is gray in every brand. Never fade a control with opacity instead." }
     },
     "text": {
       "default": { "$value": "{color.gray.900}", "$description": "Titles and body text." },
@@ -31,7 +33,8 @@
       "critical": { "$value": "{color.red.700}", "$description": "Text on the soft critical fill (color.fill.critical-subtle)." },
       "on-critical": { "$value": "{color.gray.0}", "$description": "Text on the solid critical fill (color.fill.critical)." },
       "info": { "$value": "{color.blue.700}", "$description": "Text on the soft info fill (color.fill.info-subtle)." },
-      "on-info": { "$value": "{color.gray.0}", "$description": "Text on the solid info fill (color.fill.info)." }
+      "on-info": { "$value": "{color.gray.0}", "$description": "Text on the solid info fill (color.fill.info)." },
+      "disabled": { "$value": "{color.gray.500}", "$description": "The words and icon of a control that cannot be used, on color.fill.disabled. WCAG sets no contrast minimum for it, so it has no pair in contrast-pairs.json." }
     },
     "border": {
       "default": { "$value": "{color.gray.200}", "$description": "Card edges and dividers." },
@@ -39,7 +42,8 @@
       "success": { "$value": "{color.green.600}", "$description": "The edge of a success notice." },
       "warning": { "$value": "{color.yellow.600}", "$description": "The edge of a warning notice." },
       "critical": { "$value": "{color.red.600}", "$description": "The edge of a critical notice." },
-      "info": { "$value": "{color.blue.600}", "$description": "The edge of an info notice." }
+      "info": { "$value": "{color.blue.600}", "$description": "The edge of an info notice." },
+      "disabled": { "$value": "{color.gray.200}", "$description": "The edge of a control that cannot be used, so its shape still shows against the card." }
     }
   }
 }

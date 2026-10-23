@@ -1,5 +1,5 @@
 {
-  "$description": "Every text and focus-ring colour, each surface or fill the demo puts it on, and the contrast ratio it must reach there: 4.5 for text, 3 for the focus ring. npm run check measures each pair for every brand and for no brand, in light and in dark. Card borders, dividers and the edges of status notices are decorative and left out. The button is listed by its own tokens, the ones the demo reads, which also covers color.text.on-fill.",
+  "$description": "Every text and focus-ring colour, each surface or fill the demo puts it on, and the contrast ratio it must reach there: 4.5 for text, 3 for the focus ring. npm run check measures each pair for every brand and for no brand, in light and in dark. Card borders, dividers and the edges of status notices are decorative and left out. The button is listed by its own tokens, the ones the demo reads, which also covers color.text.on-fill. Disabled text, color.text.disabled, is left out: WCAG sets no contrast minimum for a control that cannot be used, its text and edges included.",
   "color.text.default": {
     "ratio": 4.5,
     "on": ["color.surface.page", "color.surface.default"],
@@ -22,8 +22,8 @@
   },
   "button.label": {
     "ratio": 4.5,
-    "on": ["button.background", "button.background-hover"],
-    "$description": "The button's text, at rest and under the pointer."
+    "on": ["button.background", "button.background-hover", "button.background-pressed"],
+    "$description": "The button's text, at rest, under the pointer and pressed."
   },
   "color.border.focus": {
     "ratio": 3,

@@ -9,6 +9,7 @@
     "fill": {
       "brand": { "$value": "{color.brand.600}" },
       "brand-hover": { "$value": "{color.brand.700}" },
+      "brand-pressed": { "$value": "{color.brand.800}" },
       "brand-subtle": { "$value": "{color.brand.800}" },
       "success": { "$value": "{color.green.600}" },
       "success-subtle": { "$value": "{color.green.800}" },
@@ -17,7 +18,8 @@
       "critical": { "$value": "{color.red.600}" },
       "critical-subtle": { "$value": "{color.red.800}" },
       "info": { "$value": "{color.blue.600}" },
-      "info-subtle": { "$value": "{color.blue.800}" }
+      "info-subtle": { "$value": "{color.blue.800}" },
+      "disabled": { "$value": "{color.gray.800}" }
     },
     "text": {
       "default": { "$value": "{color.gray.50}" },
@@ -32,7 +34,8 @@
       "critical": { "$value": "{color.red.300}" },
       "on-critical": { "$value": "{color.gray.0}" },
       "info": { "$value": "{color.blue.300}" },
-      "on-info": { "$value": "{color.gray.0}" }
+      "on-info": { "$value": "{color.gray.0}" },
+      "disabled": { "$value": "{color.gray.500}" }
     },
     "border": {
       "default": { "$value": "{color.gray.800}" },
@@ -40,7 +43,8 @@
       "success": { "$value": "{color.green.400}" },
       "warning": { "$value": "{color.yellow.400}" },
       "critical": { "$value": "{color.red.400}" },
-      "info": { "$value": "{color.blue.400}" }
+      "info": { "$value": "{color.blue.400}" },
+      "disabled": { "$value": "{color.gray.700}" }
     }
   }
 }

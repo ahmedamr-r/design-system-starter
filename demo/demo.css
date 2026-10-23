@@ -173,8 +173,28 @@ body {
   cursor: pointer;
 }
 
-.button:hover {
+/* Under the pointer, then pressed, each from the button's own token.
+   data-state shows the same state without a pointer, for the states row. */
+.button:hover,
+.button[data-state="hover"] {
   background: var(--button-background-hover);
+}
+
+.button:active,
+.button[data-state="pressed"] {
+  background: var(--button-background-pressed);
+}
+
+/* A disabled button loses its intent, so it reads the disabled tokens and
+   looks the same in every brand. It is never faded with opacity: that would
+   let the brand colour and the card behind show through, and change with
+   both. The edge is an inset shadow, so it takes no room and the button keeps
+   its size. Coming last, it wins over hover and pressed. */
+.button:disabled {
+  background: var(--color-fill-disabled);
+  color: var(--color-text-disabled);
+  box-shadow: inset 0 0 0 1px var(--color-border-disabled);
+  cursor: not-allowed;
 }
 
 /* A line icon at the size of the words beside it, drawn in their colour. */
@@ -215,6 +235,40 @@ body {
 .button:focus-visible {
   outline: 2px solid var(--color-border-focus);
   outline-offset: 2px;
+}
+
+/* The states panels: the main button at rest, under the pointer, pressed and
+   disabled, side by side, each under the name of its state. The panel takes
+   the whole width of the page, so the four fit in one row, and they wrap on a
+   narrow screen. The row starts at the start edge, so in Arabic at rest is on
+   the right. */
+.panel.wide {
+  grid-column: 1 / -1;
+}
+
+.states {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-surface);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.state {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-control-y);
+}
+
+.state > .button {
+  margin-top: 0;
+}
+
+.state-label {
+  color: var(--color-text-subtle);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
 }
 
 /* The status panels. Each status is a badge, then a notice under it. The
