@@ -9,8 +9,9 @@
 // tokens/locales/, that same CSS once more for italics and capitals, and last
 // the icon names in the HTML, the demo's script, the CSS and the .svg files,
 // for any named left or right, and last demo/copy.json for digits and the
-// demo's HTML for a price typed in the price slot. It prints one line per
-// check, and exits with an error if any fail.
+// demo's HTML for a price typed in the price slot, and at the very end that
+// demo/copy.json still holds a language that reads right to left. It prints
+// one line per check, and exits with an error if any fail.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { resolver } from './lib/resolve.js';
@@ -1100,6 +1101,35 @@ if (existsSync('demo') && priceSlots === 0) {
   priceProblems.push('The demo\'s HTML has no price slot. The card\'s price goes in an empty element with data-price, such as <span class="amount" data-price></span>, which demo.js fills.');
 }
 check(`No string in ${COPY} writes a digit, and the price slot in the demo's HTML is empty`, [...digitProblems, ...priceProblems], { all: true });
+
+// 25. The demo's copy always holds a language that reads right to left, so the
+//     demo always has panels in that direction to look at, and a change cannot
+//     get through by dropping the Arabic set. English, the other direction, is
+//     held by check 17. A language counts when Intl.Locale reads its code as
+//     right to left and it has a set of strings; that the set is whole is
+//     check 17's job. Keys that start with $ are notes.
+const READS = { ltr: 'left to right', rtl: 'right to left' };
+const copyLanguages = copyFile
+  ? Object.entries(copyFile)
+      .filter(([language, strings]) => !language.startsWith('$') && typeof strings === 'object' && strings !== null && !Array.isArray(strings))
+      .map(([language]) => {
+        try {
+          return { language, direction: directionOf(language) };
+        } catch {
+          return { language, direction: undefined };
+        }
+      })
+  : [];
+const rightToLeftProblems = [];
+if (!copyFile) {
+  rightToLeftProblems.push(`${COPY} cannot be read, so it holds no language that reads right to left. Check 17 says why.`);
+} else if (!copyLanguages.some(({ direction }) => direction === 'rtl')) {
+  const held = copyLanguages.length === 0
+    ? 'no language at all'
+    : copyLanguages.map(({ language, direction }) => `${language}, which reads ${READS[direction] ?? 'no way Intl.Locale knows'}`).join('; ');
+  rightToLeftProblems.push(`${COPY} holds no language that reads right to left. It holds ${held}. The demo shows one set of panels per language in ${COPY}, so without one there is nothing to look at right to left. Put the Arabic set back, or add another language that reads right to left, such as he or fa, with every string English has.`);
+}
+check(`${COPY} holds a language that reads right to left, so the demo always shows that direction`, rightToLeftProblems, { all: true });
 
 if (failed > 0) {
   console.log(`\n${failed} check${failed === 1 ? '' : 's'} failed.`);
