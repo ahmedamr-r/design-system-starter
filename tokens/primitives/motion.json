@@ -1,0 +1,26 @@
+{
+  "duration": {
+    "$type": "duration",
+    "$description": "How long a change takes, named by its length in milliseconds, so 150 is 150ms. 0 is no time at all, for a change that should happen at once.",
+    "0": { "$value": { "value": 0, "unit": "ms" } },
+    "150": { "$value": { "value": 150, "unit": "ms" } },
+    "250": { "$value": { "value": 250, "unit": "ms" } },
+    "400": { "$value": { "value": 400, "unit": "ms" } }
+  },
+  "easing": {
+    "$type": "cubicBezier",
+    "$description": "The shape of a change over its time, as the two control points of a cubic Bézier curve: x1, y1, x2, y2.",
+    "standard": {
+      "$value": [0.2, 0, 0, 1],
+      "$description": "Starts quickly and settles gently, for something that stays on screen as it changes."
+    },
+    "decelerate": {
+      "$value": [0, 0, 0, 1],
+      "$description": "Arrives at full speed and slows to a stop."
+    },
+    "accelerate": {
+      "$value": [0.3, 0, 1, 1],
+      "$description": "Starts slowly and speeds up until it is gone."
+    }
+  }
+}

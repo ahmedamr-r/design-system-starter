@@ -1,5 +1,5 @@
 {
-  "$description": "Which tokens each switch may change. scripts/build.js and scripts/check.js both read this one list. A switch is a folder with one file per option that differs from the default, and folder names it. block is the selector each file in it is written under, with {name} for the file name, and null for a switch the build writes another way. declaredOn is the attribute every token this switch may change is declared on, with the tokens that read one of them, so a switch set on any element works them out again right there; null when the switch needs none. mayChange lists what its files may set: groups of tokens, each covering every token under it, or the path of a file whose tokens are the list. No token is in two lists, so no switch puts back a token another switch changed on an ancestor.",
+  "$description": "Which tokens each switch may change. scripts/build.js and scripts/check.js both read this one list. A switch is a folder with one file per option that differs from the default, and folder names it. block is the selector each file in it is written under, with {name} for the file name, and null for a switch the build writes another way. A block inside an at-rule, such as a media query, is a list from the outside in, the at-rule and then the selector inside it. declaredOn is the attribute every token this switch may change is declared on, with the tokens that read one of them, so a switch set on any element works them out again right there; null when the switch needs none. mayChange lists what its files may set: groups of tokens, each covering every token under it, or the path of a file whose tokens are the list. No token is in two lists, so no switch puts back a token another switch changed on an ancestor.",
   "brand": {
     "$description": "One file per brand, picked by data-brand. A brand may set what tokens/brands/_template.json lists, today the ten steps of the brand ramp and the button's corners, so this list points at it instead of repeating it.",
     "folder": "tokens/brands",
@@ -27,5 +27,12 @@
     "block": "[data-density=\"{name}\"]",
     "declaredOn": "[data-density]",
     "mayChange": ["space.padding", "space.gap"]
+  },
+  "preference": {
+    "$description": "One file per reader preference the page answers, picked by the reader's own setting through a media query, never by an attribute: reduced-motion.json is written inside @media (prefers-reduced-motion: reduce). It may make a movement take no time, motion.duration.base and motion.duration.slow, and nothing else. motion.duration.fast is left out on purpose: it times changes of colour and opacity, where nothing travels, so fades stay. It needs no attribute to declare them on: the media query holds for the whole page, so the block re-points them on :root and every element inherits them.",
+    "folder": "tokens/preferences",
+    "block": ["@media (prefers-{name}: reduce)", ":root"],
+    "declaredOn": null,
+    "mayChange": ["motion.duration.base", "motion.duration.slow"]
   }
 }

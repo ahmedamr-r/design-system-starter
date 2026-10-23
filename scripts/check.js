@@ -14,17 +14,20 @@
 // style in the CSS keeps its outline and draws no box-shadow, then that every
 // value in dist/tokens.css is one CSS can read, then that every type role has
 // its four parts, and at the very end that padding in the CSS reads a padding
-// role and a gap or a margin a gap role, and last of all that every switch
-// file sets only what tokens/switch-scopes.json lets its switch change. Check
-// 6 reads that list too, for where each token is declared. Check 12, that the
+// role and a gap or a margin a gap role, then that every switch file sets
+// only what tokens/switch-scopes.json lets its switch change, and last of all
+// that every transition that moves something reads motion.duration.base or
+// motion.duration.slow, which reduced motion points at 0ms. Check 6 reads
+// that list too, for where each token is declared, and reads the rules inside
+// a media query in dist/tokens.css as sitting in it. Check 12, that the
 // CSS reads only variables
 // the build writes, reads the same CSS as the side checks: every CSS file and
 // the CSS in every HTML file. It prints one line per check, and exits with an
 // error if any fail.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { resolver } from './lib/resolve.js';
-import { SCOPES, readScopes } from './lib/scopes.js';
+import { placeOf, readBlocks, resolver } from './lib/resolve.js';
+import { SCOPES, blockName, readScopes } from './lib/scopes.js';
 
 // ---------------------------------------------------------------- reading
 
@@ -60,6 +63,7 @@ const semantics = layer('semantics');
 const components = layer('components');
 const modes = layer('modes');
 const densities = layer('densities');
+const preferences = layer('preferences');
 
 // tokens/switch-scopes.json: which tokens each switch may change. Check 6
 // reads it for where each token is declared, and check 30 holds every switch
@@ -136,7 +140,7 @@ const holdsColour = (value) => {
 };
 
 check('Colour values appear only in tokens/primitives', [
-  ...[...semantics, ...components, ...brandFolder, ...densities]
+  ...[...semantics, ...components, ...brandFolder, ...densities, ...preferences]
     .filter(({ value }) => holdsColour(value))
     .map(({ path, file }) => `${file}: ${path} holds a colour value. Point it at a primitive instead.`),
   ...demoCss.flatMap(({ file, text }) =>
@@ -191,7 +195,7 @@ const pointsDown = (token) => {
   return [];
 };
 check('Every token points one layer down, or at a step of the brand ramp, and a shadow its colour at color.shadow',
-  [...semantics, ...components, ...brandFolder, ...modes, ...densities].flatMap(pointsDown));
+  [...semantics, ...components, ...brandFolder, ...modes, ...densities, ...preferences].flatMap(pointsDown));
 
 // 3. The demo reads semantic tokens, never a primitive and never a step of the
 //    brand ramp. A step has no dark answer: color.text.link turns lighter in
@@ -278,21 +282,20 @@ const brandProblems = (file) => {
 };
 check('Brand files set every step of the brand ramp, step for step on one primitive ramp', brandFiles.flatMap(brandProblems));
 
-// 5 and 6 read the built CSS.
+// 5, 6, 12, 13 and 14 read the built CSS, through readBlocks in
+// scripts/lib/resolve.js, the one reader of dist/tokens.css. It reads the
+// rules inside a media query too, such as the :root inside
+// @media (prefers-reduced-motion: reduce), and says which at-rules each one
+// sits in, as within. A block inside an at-rule is never a block of
+// declarations: it holds only for a reader the query matches.
 if (!existsSync('dist/tokens.css')) {
   console.log('✖ dist/tokens.css is missing. Run npm run build first.');
   process.exit(1);
 }
-const blocks = [...readFileSync('dist/tokens.css', 'utf8')
-  .replace(/\/\*[\s\S]*?\*\//g, '')
-  .matchAll(/([^{}]+)\{([^}]*)\}/g)]
-  .map(([, selector, body]) => ({
-    selector: selector.trim(),
-    declarations: [...body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map(([, name, value]) => ({ name, value: value.trim() })),
-  }));
+const blocks = readBlocks(readFileSync('dist/tokens.css', 'utf8'));
 const semanticCss = new Set([...layeredNames].map(cssName));
-const builtSemantics = blocks.flatMap(({ selector, declarations }) =>
-  declarations.filter(({ name }) => semanticCss.has(name)).map((declaration) => ({ ...declaration, selector })),
+const builtSemantics = blocks.flatMap(({ selector, within, declarations }) =>
+  declarations.filter(({ name }) => semanticCss.has(name)).map((declaration) => ({ ...declaration, selector, within })),
 );
 
 // 5. In the built CSS, every semantic and component token is still a reference.
@@ -309,7 +312,7 @@ const SHADOW = new RegExp(String.raw`^${ONE_SHADOW}(?:\s*,\s*${ONE_SHADOW})*$`);
 const isReference = (value) => new RegExp(`^${VAR}$`).test(value) || LIGHT_DARK.test(value) || SHADOW.test(value);
 check('Every semantic and component token in dist/tokens.css is a var() reference, light-dark() of two, or a shadow whose every part is a var() reference', builtSemantics
   .filter(({ value }) => !isReference(value))
-  .map(({ name, value, selector }) => `${name} is baked to ${value} under ${selector}. A brand that re-points what it reads will not reach it.`));
+  .map(({ name, value, selector, within }) => `${name} is baked to ${value} under ${placeOf({ selector, within })}. A brand that re-points what it reads will not reach it.`));
 
 // 6. Every semantic and component token is declared on :root, and on the
 //    attribute of each switch in tokens/switch-scopes.json that may change it
@@ -333,16 +336,18 @@ const LOCALES = join('tokens', 'locales');
 const localeFiles = jsonFiles(LOCALES);
 const locales = localeFiles.flatMap(tokensIn);
 const scopesOf = (selector) => selector.split(',').map((part) => part.trim());
-// A block of declarations: every part of its selector is :root or a bare
-// attribute, such as [data-brand]. A switch's own block, such as
-// [data-density="compact"] or :lang(ar), is not one.
-const isBaseBlock = (selector) => scopesOf(selector).every((part) => part === ':root' || /^\[[\w-]+\]$/.test(part));
-const baseDeclarations = builtSemantics.filter(({ selector }) => isBaseBlock(selector));
+// A block of declarations: it sits inside no at-rule, and every part of its
+// selector is :root or a bare attribute, such as [data-brand]. A switch's own
+// block, such as [data-density="compact"], :lang(ar), or the :root inside
+// @media (prefers-reduced-motion: reduce), is not one.
+const isBaseBlock = ({ selector, within = [] }) => within.length === 0 && scopesOf(selector).every((part) => part === ':root' || /^\[[\w-]+\]$/.test(part));
+const baseDeclarations = builtSemantics.filter(isBaseBlock);
 const pathOfCss = new Map([...layeredNames].map((path) => [cssName(path), path]));
-// What each token reads on :root, by CSS name.
+// What each token reads on :root, by CSS name, for a reader with no
+// preference: a :root inside a media query is left out.
 const readsOnRoot = new Map();
-for (const { selector, declarations } of blocks) {
-  if (!scopesOf(selector).includes(':root')) continue;
+for (const { selector, within, declarations } of blocks) {
+  if (within.length > 0 || !scopesOf(selector).includes(':root')) continue;
   for (const { name, value } of declarations) readsOnRoot.set(name, [...value.matchAll(/var\(\s*(--[\w-]+)/g)].map(([, read]) => read));
 }
 const readsAll = (name, seen = new Set()) => {
@@ -381,16 +386,19 @@ const declarationProblems = [...semanticCss].filter((name) => declaredOn.has(nam
   }
   return problems;
 });
-const lastBase = blocks.findLastIndex(({ selector, declarations }) =>
-  isBaseBlock(selector) && declarations.some(({ name }) => semanticCss.has(name)));
+const lastBase = blocks.findLastIndex((block) =>
+  isBaseBlock(block) && block.declarations.some(({ name }) => semanticCss.has(name)));
+// A switch's block is found by where it is written, at-rules and selector
+// together, so a :root inside @media (prefers-reduced-motion: reduce) is the
+// reduced-motion block, and the plain :root is not.
 const switchBlockProblems = switches.filter(({ block }) => block !== null).flatMap((each) =>
   each.options()
     .filter((file) => tokensIn(file).length > 0)
     .flatMap((file) => {
-      const wanted = each.blockFor(file);
-      const at = blocks.findIndex(({ selector }) => selector === wanted);
+      const wanted = blockName(each.blockFor(file));
+      const at = blocks.findIndex((block) => placeOf(block) === wanted);
       if (at === -1) {
-        return [`${file} has no ${wanted} block in dist/tokens.css. Build each file in ${each.folder} as ${each.block}, as ${SCOPES} says, so ${each.declaredOn ?? 'its switch'} picks it.`];
+        return [`${file} has no ${wanted} block in dist/tokens.css. Build each file in ${each.folder} as ${blockName(each.block)}, as ${SCOPES} says, so ${each.declaredOn ?? 'its switch'} picks it.`];
       }
       if (at < lastBase) {
         return [`The ${wanted} block from ${file} comes before the declarations it re-points, so they would undo it. Put every switch's blocks after them.`];
@@ -1375,7 +1383,7 @@ check('Every focus style keeps its outline, and none draws a ring with box-shado
 //     message names the token files that set the token, so the fix goes there.
 const BUILT = 'dist/tokens.css';
 const builtText = readFileSync(BUILT, 'utf8').replace(/\/\*[\s\S]*?\*\//g, blank);
-const everyToken = [...primitives, ...semantics, ...components, ...brandFolder, ...modes, ...locales, ...densities];
+const everyToken = [...primitives, ...semantics, ...components, ...brandFolder, ...modes, ...locales, ...densities, ...preferences];
 const UNREADABLE = [
   { pattern: /\[object [A-Za-z]+\]/, what: 'an object the build wrote as text' },
   { pattern: /(?<![\w-])(?:undefined|null|NaN|-?Infinity)(?![\w-])/, what: 'a value that was missing, or not a number, when the build wrote it' },
@@ -1534,6 +1542,149 @@ const switchFileProblems = switches.flatMap((each) => each.options().flatMap((fi
   return [`${file}: ${path} is not something a ${each.name} may change: ${where}.${whose} Take it out, or, if every ${each.name} should be able to change it, add it to ${each.source} first.`];
 })));
 check(`Every switch file sets only what ${SCOPES} lets its switch change`, [...listProblems, ...switchFileProblems], { all: true });
+
+// 31. A transition that moves something reads motion.duration.base or
+//     motion.duration.slow. tokens/preferences/reduced-motion.json points
+//     those two at 0ms inside @media (prefers-reduced-motion: reduce), and
+//     leaves motion.duration.fast alone, so fades stay. A movement timed any
+//     other way, with fast, a primitive or a raw time such as 200ms, would
+//     still travel for a reader who asked for less motion. It reads the same
+//     CSS as check 18. A transition moves something when it names transform,
+//     translate, rotate, scale, an offset-, inset or a top, bottom, left or
+//     right, or all, which is what a transition with no property names. The
+//     transition shorthand and the transition-property and transition-duration
+//     longhands count, within one rule, with each property paired with its
+//     duration the way CSS pairs them, the list of durations repeating. The
+//     duration passes when every var() in it reads base or slow, inside
+//     calc() too, and it holds no time of its own. That a change of colour or
+//     opacity reads fast is by hand.
+const MOVING_DURATIONS = ['motion.duration.base', 'motion.duration.slow'];
+const movingCss = MOVING_DURATIONS.map(cssName);
+const MOVES = /^(?:all|transform|translate|rotate|scale|offset(?:-[\w-]+)?|inset(?:-[\w-]+)?|top|bottom|left|right)$/;
+const TIME = /^[+-]?(?:\d+\.?\d*|\.\d+)m?s$/i;
+const TIME_IN = /(?<![\w.-])[+-]?(?:\d+\.?\d*|\.\d+)m?s(?![\w-])/i;
+const EASING_WORDS = new Set(['ease', 'ease-in', 'ease-out', 'ease-in-out', 'linear', 'step-start', 'step-end']);
+const NOT_A_PROPERTY = new Set(['normal', 'allow-discrete', 'initial', 'inherit', 'unset', 'revert', 'revert-layer']);
+// What each token comes to at the end of its references: a duration, as
+// { value, unit: 'ms' }, or a curve, four numbers.
+const tokenValues = new Map([...primitives, ...semantics, ...components].map(({ path, value }) => [path, value]));
+const endOf = (path, seen = new Set()) => {
+  if (seen.has(path) || !tokenValues.has(path)) return undefined;
+  seen.add(path);
+  const value = tokenValues.get(path);
+  const next = referenceIn(value);
+  return next ? endOf(next, seen) : value;
+};
+const kindOfToken = new Map([...tokenValues.keys()].map((path) => {
+  const end = endOf(path);
+  const kind = end && typeof end === 'object' && !Array.isArray(end) && ['ms', 's'].includes(end.unit) ? 'duration'
+    : Array.isArray(end) && end.length === 4 && end.every((n) => typeof n === 'number') ? 'easing' : undefined;
+  return [cssName(path), kind];
+}));
+// A list split at commas outside brackets, as transition: a 1s, b 2s.
+const splitList = (value) => {
+  const items = [];
+  let depth = 0;
+  let current = '';
+  for (const char of value) {
+    if (char === '(') depth += 1;
+    if (char === ')') depth -= 1;
+    if (char === ',' && depth === 0) {
+      items.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  items.push(current.trim());
+  return items.filter(Boolean);
+};
+const readsIn = (text) => [...text.matchAll(/var\(\s*(--[\w-]+)/g)].map(([, name]) => name);
+// One part of a single transition: a time, an easing, a keyword, or the
+// property. A var() is a time unless every token it reads is a curve.
+const kindOfPart = (part) => {
+  const lower = part.toLowerCase();
+  if (TIME.test(lower)) return 'time';
+  if (EASING_WORDS.has(lower) || /^(?:cubic-bezier|steps|linear)\(/.test(lower)) return 'easing';
+  const reads = readsIn(part);
+  if (reads.length > 0) return reads.every((name) => kindOfToken.get(name) === 'easing') ? 'easing' : 'time';
+  if (/^calc\(/.test(lower)) return 'time';
+  if (NOT_A_PROPERTY.has(lower)) return 'keyword';
+  return 'property';
+};
+// Each single transition in the shorthand, as { property, duration }: the
+// first time is the duration, and a transition with no property names all.
+const singlesOf = (value) => splitList(value).map((single) => {
+  const parts = partsOf(single);
+  return {
+    property: parts.find((part) => kindOfPart(part) === 'property')?.toLowerCase() ?? 'all',
+    duration: parts.find((part) => kindOfPart(part) === 'time'),
+  };
+});
+const ruleSelectors = new Map(preludes.map(({ rule, prelude }) => [rule, prelude]));
+const READ_MOVING = `Read var(${movingCss[0]}) for a small movement or var(${movingCss[1]}) for a large one`;
+const movingProblem = ({ where, selector, property, duration }) => {
+  const moves = property === 'all'
+    ? `transitions all, which moves whatever changes, a transform included, in "${selector}"`
+    : `moves ${property} in "${selector}"`;
+  if (duration === undefined) {
+    return `${where} ${moves} with no duration. ${READ_MOVING}, so reduced motion reaches it.`;
+  }
+  const reads = readsIn(duration);
+  const time = duration.match(TIME_IN)?.[0];
+  if (reads.length > 0 && reads.every((name) => movingCss.includes(name)) && !time) return undefined;
+  const other = reads.find((name) => !movingCss.includes(name));
+  let why;
+  if (other === cssName('motion.duration.fast')) {
+    why = `with ${other}, which times changes of colour and opacity, where nothing travels. Reduced motion keeps fast, so this movement would still travel for a reader who asked for less motion.`;
+  } else if (other && primitiveCss.has(other)) {
+    why = `with ${other}, a primitive, which reduced motion never re-points, so this movement would still travel for a reader who asked for less motion.`;
+  } else if (other) {
+    why = `with ${other}, which is not ${MOVING_DURATIONS.join(' or ')}, so reduced motion does not reach it.`;
+  } else {
+    why = `in ${time}, a time of its own, which reduced motion cannot reach, so this movement would still travel for a reader who asked for less motion.`;
+  }
+  return `${where} ${moves} ${why} ${READ_MOVING}.`;
+};
+const transitionProblems = [];
+for (const rule of new Set(declarations.map((declaration) => declaration.rule))) {
+  const selector = ruleSelectors.get(rule) ?? 'a style attribute';
+  let properties;
+  let durations;
+  let propertyLine;
+  let durationLine;
+  let file;
+  for (const declaration of declarations.filter((each) => each.rule === rule)) {
+    ({ file } = declaration);
+    if (declaration.property === 'transition') {
+      const singles = singlesOf(declaration.value);
+      properties = singles.map(({ property }) => property);
+      durations = singles.map(({ duration }) => duration);
+      propertyLine = declaration.line;
+      durationLine = declaration.line;
+    } else if (declaration.property === 'transition-property') {
+      properties = splitList(declaration.value).map((name) => name.toLowerCase());
+      propertyLine = declaration.line;
+    } else if (declaration.property === 'transition-duration') {
+      durations = splitList(declaration.value);
+      durationLine = declaration.line;
+    }
+  }
+  if (!properties) continue;
+  properties.forEach((property, i) => {
+    if (!MOVES.test(property)) return;
+    const duration = durations && durations.length > 0 ? durations[i % durations.length] : undefined;
+    const where = `${file}:${duration === undefined ? propertyLine : durationLine}`;
+    const problem = movingProblem({ where, selector, property, duration });
+    if (problem) transitionProblems.push(problem);
+  });
+}
+const missingMoving = MOVING_DURATIONS.filter((path) => !semanticNames.has(path))
+  .map((path) => `${path} is missing from tokens/semantics/. A transition that moves something reads it, and tokens/preferences/reduced-motion.json points it at 0ms.`);
+check('Every transition that moves something reads motion.duration.base or motion.duration.slow, so reduced motion reaches it', [
+  ...missingMoving,
+  ...transitionProblems.sort((a, b) => a.localeCompare(b, 'en', { numeric: true })),
+], { all: true });
 
 if (failed > 0) {
   console.log(`\n${failed} check${failed === 1 ? '' : 's'} failed.`);

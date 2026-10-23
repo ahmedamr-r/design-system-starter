@@ -1,0 +1,9 @@
+{
+  "$description": "Reduced motion, picked by the reader's own setting through @media (prefers-reduced-motion: reduce), never by an attribute. Every movement takes no time, so nothing travels across the screen; a change of colour or opacity keeps its time, so fades stay.",
+  "motion": {
+    "duration": {
+      "base": { "$value": "{duration.0}", "$description": "250ms down to 0ms: a small movement happens at once." },
+      "slow": { "$value": "{duration.0}", "$description": "400ms down to 0ms: a large movement happens at once." }
+    }
+  }
+}

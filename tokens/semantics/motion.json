@@ -1,0 +1,35 @@
+{
+  "motion": {
+    "$description": "How long a change takes and how it moves. A transition reads one duration and one easing, as in transition: translate var(--motion-duration-base) var(--motion-easing-move). A transition that moves something reads base or slow, never fast, so the reduced-motion preference reaches it.",
+    "duration": {
+      "$type": "duration",
+      "fast": {
+        "$value": "{duration.150}",
+        "$description": "A change of colour or opacity, where nothing travels, such as a button's fill under the pointer. Reduced motion keeps it, so fades stay."
+      },
+      "base": {
+        "$value": "{duration.250}",
+        "$description": "A small movement, such as a card lifting a little under the pointer. Reduced motion makes it 0ms."
+      },
+      "slow": {
+        "$value": "{duration.400}",
+        "$description": "A large movement, such as a panel sliding in. Reduced motion makes it 0ms."
+      }
+    },
+    "easing": {
+      "$type": "cubicBezier",
+      "enter": {
+        "$value": "{easing.decelerate}",
+        "$description": "Something coming onto the screen: it arrives quickly and slows to a stop."
+      },
+      "exit": {
+        "$value": "{easing.accelerate}",
+        "$description": "Something leaving the screen: it starts slowly and speeds away."
+      },
+      "move": {
+        "$value": "{easing.standard}",
+        "$description": "Something that stays on screen as it changes, or moves from one place to another on it."
+      }
+    }
+  }
+}

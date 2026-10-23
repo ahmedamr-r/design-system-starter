@@ -5,7 +5,9 @@
 //     blocks winning, so a brand's re-pointing beats the :root answer;
 //   - var() is followed through any number of tokens, until a hex colour;
 //   - light-dark(light, dark) gives its first answer in light and its second
-//     in dark, wherever it turns up along the way.
+//     in dark, wherever it turns up along the way;
+//   - a block inside a media query, such as the reduced-motion block, counts
+//     only when the caller says that query holds, with { holds: [...] }.
 // It reads the built CSS rather than the token files, so it measures what
 // ships. A brand block writes var() with no light-dark(), so a token a brand
 // re-points keeps that colour in dark as well, and this follows it the same way.
@@ -17,14 +19,43 @@
 
 export const cssName = (path) => (path.startsWith('--') ? path : `--${path.replaceAll('.', '-')}`);
 
-// The rule blocks of a CSS file, as { selector, declarations: [{ name, value }] },
-// with comments taken out.
+// The rule blocks of a CSS file, in source order, as
+// { selector, within, declarations: [{ name, value }] }, with comments taken
+// out. within lists the at-rules a rule sits inside, from the outside in, so
+// the :root inside @media (prefers-reduced-motion: reduce) { :root { … } }
+// comes back as { selector: ':root', within: ['@media (prefers-reduced-motion:
+// reduce)'] }, and a rule at the top has within []. An at-rule's own prelude
+// is never a selector.
 export function readBlocks(css) {
-  return [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^}]*)\}/g)].map(([, selector, body]) => ({
-    selector: selector.trim(),
-    declarations: [...body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map(([, name, value]) => ({ name, value: value.trim() })),
-  }));
+  const text = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const blocks = [];
+  const open = [];
+  let from = 0;
+  for (let at = 0; at < text.length; at++) {
+    const char = text[at];
+    if (char === '{') {
+      open.push({ prelude: text.slice(from, at).trim().replace(/\s+/g, ' '), body: at + 1 });
+      from = at + 1;
+    } else if (char === '}') {
+      const rule = open.pop();
+      if (rule && !rule.prelude.startsWith('@')) {
+        blocks.push({
+          selector: rule.prelude,
+          within: open.map(({ prelude }) => prelude),
+          declarations: [...text.slice(rule.body, at).matchAll(/(--[\w-]+)\s*:\s*([^;{}]+);/g)].map(([, name, value]) => ({ name, value: value.trim() })),
+        });
+      }
+      from = at + 1;
+    } else if (char === ';' && text.slice(from, at).trim().startsWith('@')) {
+      from = at + 1; // A statement at-rule, such as @import, has no block.
+    }
+  }
+  return blocks;
 }
+
+// Where a block is written, as CSS would nest it: :root, or
+// @media (prefers-reduced-motion: reduce) { :root }.
+export const placeOf = ({ selector, within = [] }) => [...within, selector].reduceRight((inner, outer) => `${outer} { ${inner} }`);
 
 // Whether one part of a selector list reaches the page root (brand null), or
 // an element with data-brand="<brand>".
@@ -36,11 +67,16 @@ const reaches = (part, brand) => {
 };
 
 // Every custom property an element sees: what :root declares, which it
-// inherits, then what is declared on the element itself, in source order.
-export function variablesFor(blocks, brand = null) {
+// inherits, then what is declared on the element itself, in source order. A
+// block inside an at-rule counts only when every at-rule around it is in
+// holds, such as ['@media (prefers-reduced-motion: reduce)'] for a reader who
+// asked for less motion; by default none holds, and the page is read as for a
+// reader with no preference.
+export function variablesFor(blocks, brand = null, { holds = [] } = {}) {
   const seen = new Map();
   const declare = (who) => {
-    for (const { selector, declarations } of blocks) {
+    for (const { selector, within = [], declarations } of blocks) {
+      if (!within.every((atRule) => holds.includes(atRule))) continue;
       if (!selector.split(',').some((part) => reaches(part.trim(), who))) continue;
       for (const { name, value } of declarations) seen.set(name, value);
     }
@@ -106,8 +142,9 @@ export function colourIn(variables, token, mode = 'light') {
 export function resolver(css) {
   const blocks = readBlocks(css);
   const byBrand = new Map();
-  return (token, { brand = null, mode = 'light' } = {}) => {
-    if (!byBrand.has(brand)) byBrand.set(brand, variablesFor(blocks, brand));
-    return colourIn(byBrand.get(brand), token, mode);
+  return (token, { brand = null, mode = 'light', holds = [] } = {}) => {
+    const key = JSON.stringify([brand, holds]);
+    if (!byBrand.has(key)) byBrand.set(key, variablesFor(blocks, brand, { holds }));
+    return colourIn(byBrand.get(key), token, mode);
   };
 }

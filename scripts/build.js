@@ -7,7 +7,10 @@
 //   4. for each switch in tokens/switch-scopes.json that has a block, in the
 //      order it lists them, one block per file: [data-brand="<name>"] for each
 //      brand, :lang(<code>) for each locale, [data-density="<name>"] for each
-//      density, re-pointing what that switch may change;
+//      density, and :root inside @media (prefers-<name>: reduce) for each
+//      reader preference, re-pointing what that switch may change. A block
+//      the list gives as a list, at-rule first, is nested by Style
+//      Dictionary's own css/variables format;
 //   5. color-scheme: "light dark" on :root, so a page that sets no mode follows
 //      the reader's setting, then one value per data-mode.
 //
@@ -54,7 +57,7 @@ import { usesReferences } from 'style-dictionary/utils';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { basename } from 'node:path';
-import { SCOPES, readScopes } from './lib/scopes.js';
+import { SCOPES, blockName, readScopes } from './lib/scopes.js';
 
 const PARTS = 'dist/.parts/';
 const BASE = ['tokens/primitives/**/*.json', 'tokens/semantics/**/*.json', 'tokens/components/**/*.json'];
@@ -266,7 +269,7 @@ for (const brand of empty) {
   console.log(`Left out ${brand}: tokens/brands/${brand}.json sets nothing, so data-brand="${brand}" looks like no brand and dist/brands.json does not list it. npm run check lists what it needs.`);
 }
 for (const { name, blocks } of switchBlocks.filter((each) => !isBrands(each))) {
-  console.log(`Wrote ${blocks.length} ${name} block${blocks.length === 1 ? '' : 's'}: ${blocks.map(({ selector }) => selector).join(', ') || 'none'}`);
+  console.log(`Wrote ${blocks.length} ${name} block${blocks.length === 1 ? '' : 's'}: ${blocks.map(({ selector }) => blockName(selector)).join(', ') || 'none'}`);
 }
 const counts = new Map();
 for (const selector of selectorOf.values()) counts.set(selector, (counts.get(selector) ?? 0) + 1);

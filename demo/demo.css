@@ -83,6 +83,17 @@ body {
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-surface);
   box-shadow: var(--elevation-resting);
+  /* A small movement, so it reads base, which reduced motion makes 0ms: for
+     a reader who asked for less motion the card is lifted at once, without
+     travelling. npm run check fails a movement that reads anything else. */
+  transition: translate var(--motion-duration-base) var(--motion-easing-move);
+}
+
+/* The card lifts a little under the pointer. The 2px fits no token, since
+   no token holds a distance to move, so it stays 2px until the designer
+   picks one. */
+.card:hover {
+  translate: 0 -2px;
 }
 
 .card-head {
@@ -194,6 +205,9 @@ body {
   line-height: var(--type-label-line-height);
   letter-spacing: var(--type-label-letter-spacing);
   cursor: pointer;
+  /* The fill fades under the pointer. Nothing travels, so it reads fast,
+     which reduced motion keeps: the fade stays for every reader. */
+  transition: background-color var(--motion-duration-fast) var(--motion-easing-move);
 }
 
 /* Under the pointer, then pressed, each from the button's own token.

@@ -17,7 +17,11 @@
 //   - covers(path) says whether the switch may change the token at path: the
 //     path is in mayChange, or sits under a group that is;
 //   - blockFor(file) is the selector a file of this switch is written under,
-//     such as [data-density="compact"], or null for a switch with no block;
+//     such as [data-density="compact"], or null for a switch with no block.
+//     A block inside an at-rule is a list from the outside in, such as
+//     ['@media (prefers-reduced-motion: reduce)', ':root'] for
+//     tokens/preferences/reduced-motion.json, which Style Dictionary's
+//     css/variables format nests one inside the other;
 //   - options() lists the files in its folder, sorted, leaving out any whose
 //     name starts with an underscore, which is not an option.
 // problems lists what is wrong with the file itself, in plain words; the
@@ -26,6 +30,12 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
 export const SCOPES = 'tokens/switch-scopes.json';
+
+// A block as CSS writes it, for messages: [data-density="compact"], or, for one
+// inside an at-rule, @media (prefers-reduced-motion: reduce) { :root }.
+export const blockName = (block) => (Array.isArray(block)
+  ? block.reduceRight((inner, outer) => `${outer} { ${inner} }`)
+  : String(block));
 
 // Every token path a file sets, such as color.brand.600, leaving out $ keys.
 export function tokenPathsIn(file) {
@@ -84,7 +94,15 @@ export function readScopes(file = SCOPES) {
       mayChange = [];
     }
     const covers = (path) => mayChange.some((listed) => path === listed || path.startsWith(`${listed}.`));
-    const blockFor = (option) => (block === null ? null : block.replaceAll('{name}', basename(option, '.json')));
+    if (block !== null && typeof block !== 'string' && !(Array.isArray(block) && block.length > 0 && block.every((part) => typeof part === 'string'))) {
+      problems.push(`${file}: ${name}'s block is the selector its files are written under, such as "[data-density=\\"{name}\\"]", a list from the outside in for one inside an at-rule, such as ["@media (prefers-{name}: reduce)", ":root"], or null.`);
+      continue;
+    }
+    const blockFor = (option) => {
+      if (block === null) return null;
+      const named = (part) => part.replaceAll('{name}', basename(option, '.json'));
+      return Array.isArray(block) ? block.map(named) : named(block);
+    };
     const options = () => (existsSync(folder)
       ? readdirSync(folder).filter((option) => option.endsWith('.json') && !option.startsWith('_')).sort().map((option) => join(folder, option))
       : []);
