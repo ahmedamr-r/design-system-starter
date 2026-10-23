@@ -1,0 +1,18 @@
+{
+  "elevation": {
+    "$type": "shadow",
+    "$description": "How high something sits above the page, as a shadow. A component asks for a height by name, as in box-shadow: var(--elevation-raised), and never writes a shadow of its own. Each height's offsets, blur and spread point at the size scale and stay the same in light and dark; its colour points at color.shadow, which the mode answers with a deeper one.",
+    "resting": {
+      "$value": { "color": "{color.shadow.resting}", "offsetX": "{size.0}", "offsetY": "{size.50}", "blur": "{size.100}", "spread": "{size.0}" },
+      "$description": "Sits on the page: cards."
+    },
+    "raised": {
+      "$value": { "color": "{color.shadow.raised}", "offsetX": "{size.0}", "offsetY": "{size.100}", "blur": "{size.300}", "spread": "{size.0}" },
+      "$description": "Lifts above a card: menus and popovers, on color.surface.raised."
+    },
+    "floating": {
+      "$value": { "color": "{color.shadow.floating}", "offsetX": "{size.0}", "offsetY": "{size.200}", "blur": "{size.600}", "spread": "{size.0}" },
+      "$description": "Floats above everything: dialogs, on color.surface.raised."
+    }
+  }
+}

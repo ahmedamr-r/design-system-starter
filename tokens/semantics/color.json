@@ -3,7 +3,8 @@
     "$type": "color",
     "surface": {
       "page": { "$value": "{color.gray.50}", "$description": "The page behind everything." },
-      "default": { "$value": "{color.gray.0}", "$description": "Cards, panels and anything that sits on the page." }
+      "default": { "$value": "{color.gray.0}", "$description": "Cards, panels and anything that sits on the page." },
+      "raised": { "$value": "{color.gray.0}", "$description": "Menus, dialogs and anything else that floats above a card, under elevation.raised or elevation.floating. In light it is white like a card, and its shadow shows the lift; in dark it is a step lighter than a card, since a shadow barely shows on a dark surface." }
     },
     "fill": {
       "brand": { "$value": "{color.brand.600}", "$description": "The main button: the one thing to press first." },
@@ -44,6 +45,12 @@
       "critical": { "$value": "{color.red.600}", "$description": "The edge of a critical notice." },
       "info": { "$value": "{color.blue.600}", "$description": "The edge of an info notice." },
       "disabled": { "$value": "{color.gray.200}", "$description": "The edge of a control that cannot be used, so its shape still shows against the card." }
+    },
+    "shadow": {
+      "$description": "The colour of each elevation's shadow, one per height in elevation.json. The shadow's shape is the same in light and dark, so only these change with the mode: dark answers each with about four times the opacity, since a shadow barely shows on a dark surface.",
+      "resting": { "$value": "{color.black.8}", "$description": "The shadow under elevation.resting: cards." },
+      "raised": { "$value": "{color.black.12}", "$description": "The shadow under elevation.raised: menus and popovers." },
+      "floating": { "$value": "{color.black.16}", "$description": "The shadow under elevation.floating: dialogs." }
     }
   }
 }

@@ -17,10 +17,16 @@
 // brand, in light and in dark, each with a badge and a notice for every status.
 // A brand never re-points a status, so they come out the same in every brand.
 //
-// Last the states panels: 9. the card's main button at rest, under the
+// Then the states panels: 9. the card's main button at rest, under the
 // pointer, pressed, focused and disabled, side by side, for no brand and each brand, in
 // light and in dark. The names of the states are the demo's own labels, like
 // the panel labels, so they stay in the page's language.
+//
+// Last the elevation panels: 10. the three heights side by side, resting,
+// raised and floating, with no brand, in light and in dark, since a brand never
+// changes a shadow. Each tile is named for its height and shows the variable
+// it reads. The names are the demo's own labels too, and the variable is code,
+// so it stays English in every panel.
 //
 // Each of those panels comes once for each language in copy.json: first in the
 // page's own language, the one on <html>, then right after it in each other
@@ -241,6 +247,41 @@ function statesCard({ language }) {
   return article;
 }
 
+// The three heights, lowest first. Each tile asks for its height by name, as
+// --elevation-<height>, and demo.css paints the surface that goes with it.
+// The labels are the demo's own words, in the page's language.
+const heights = [
+  { label: 'Resting', height: 'resting' },
+  { label: 'Raised', height: 'raised' },
+  { label: 'Floating', height: 'floating' },
+];
+
+// The heights side by side, each a tile with its name and, under it, the
+// variable it reads. Inside a panel in another language the names set the
+// page's lang and dir again, as the panel labels do. The variable is code, so
+// it sets its own lang and dir in every panel: English, which reads the way
+// Intl.Locale says.
+function heightsRow({ language }) {
+  const list = document.createElement('ul');
+  list.className = 'heights';
+  for (const { label, height } of heights) {
+    const item = document.createElement('li');
+    item.className = 'height';
+    item.dataset.height = height;
+    const name = document.createElement('span');
+    name.className = 'height-name';
+    name.textContent = label;
+    if (inOtherLanguage(language)) setLanguage(name, pageLanguage);
+    const token = document.createElement('code');
+    token.className = 'height-token';
+    token.textContent = `--elevation-${height}`;
+    setLanguage(token, 'en');
+    item.append(name, token);
+    list.append(item);
+  }
+  return list;
+}
+
 // A link in the colours of the panel it sits in, to compare with the card. Its
 // words are the page's, like a label's.
 function link(text, language) {
@@ -339,6 +380,16 @@ for (const brand of [undefined, ...brands]) {
       statesCard({ language }),
     ));
   }
+}
+
+// 10. The elevation panels: the three heights, with no brand, in light and in
+// dark. The shadows keep their shape in both, and dark answers each colour
+// with one about four times as deep.
+for (const mode of modes) {
+  cases.push((language) => panel(
+    { label: `Elevation, ${mode}`, mode, language, wide: true },
+    heightsRow({ language }),
+  ));
 }
 
 // Egyptian Arabic, for the light panel with no brand. It reads ar's words, but

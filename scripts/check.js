@@ -127,11 +127,17 @@ const demoCss = existsSync('demo')
       .map((file) => ({ file: join('demo', file), text: readFileSync(join('demo', file), 'utf8') }))
   : [];
 
+// A value holds a colour if it is one, or, for a shadow, if any of its parts
+// is one: a shadow is an object with a colour inside, or a list of them.
+const holdsColour = (value) => {
+  if (Array.isArray(value)) return value.some(holdsColour);
+  if (value && typeof value === 'object') return 'colorSpace' in value || Object.values(value).some(holdsColour);
+  return COLOUR_LITERAL.test(String(value));
+};
+
 check('Colour values appear only in tokens/primitives', [
   ...[...semantics, ...components, ...brandFolder, ...densities]
-    .filter(({ value }) =>
-      typeof value === 'object' ? 'colorSpace' in value : COLOUR_LITERAL.test(String(value)),
-    )
+    .filter(({ value }) => holdsColour(value))
     .map(({ path, file }) => `${file}: ${path} holds a colour value. Point it at a primitive instead.`),
   ...demoCss.flatMap(({ file, text }) =>
     text
@@ -146,20 +152,45 @@ check('Colour values appear only in tokens/primitives', [
 //    primitive, any other semantic at a primitive or a step of the ramp, and a
 //    component token at a semantic. A brand, mode or density follows the rule
 //    of the token it re-points.
+//
+//    A shadow semantic, such as elevation.raised, is the one semantic made of
+//    parts. Its offsets, blur and spread point at primitives, the size scale,
+//    and stay the same in light and dark. Its colour points at a color.shadow
+//    semantic instead, since a mode re-points colour semantics only: that is
+//    how dark mode reaches a shadow's colour without changing its shape.
 const primitivesOrSteps = new Set([...primitiveNames, ...rampSteps]);
+const SHADOW_SIZES = ['offsetX', 'offsetY', 'blur', 'spread'];
+const shadowColours = new Set([...semanticNames].filter((path) => path.startsWith('color.shadow.')));
+const isShadow = (value) => (Array.isArray(value) ? value.length > 0 && value.every(isShadow)
+  : Boolean(value) && typeof value === 'object' && ['color', ...SHADOW_SIZES].some((part) => part in value));
 const mayPointAt = (path) => {
   if (componentNames.has(path)) return { allowed: semanticNames, what: 'a semantic token' };
   if (rampSteps.has(path)) return { allowed: primitiveNames, what: 'a primitive token' };
   return { allowed: primitivesOrSteps, what: 'a primitive token or a step of the brand ramp' };
 };
+const shadowProblems = (token) => [token.value].flat().flatMap((shadow) => {
+  const problems = [];
+  const colour = referenceIn(shadow.color);
+  if (!colour || !shadowColours.has(colour)) {
+    const has = colour ? `points its colour at {${colour}}` : shadow.color === undefined ? 'has no colour' : 'holds a colour value';
+    problems.push(`${token.file}: ${token.path} ${has}. A shadow's colour points at a color.shadow semantic, which tokens/modes/dark.json answers, so dark mode reaches it.`);
+  }
+  for (const part of SHADOW_SIZES.filter((each) => shadow[each] !== undefined)) {
+    const target = referenceIn(shadow[part]);
+    if (!target) problems.push(`${token.file}: ${token.path}'s ${part} holds a value. Point it at a step of the size scale, such as {size.100}.`);
+    else if (!primitiveNames.has(target)) problems.push(`${token.file}: ${token.path}'s ${part} points at {${target}}, which is not a primitive. Point it at a step of the size scale, such as {size.100}.`);
+  }
+  return problems;
+});
 const pointsDown = (token) => {
+  if (semanticNames.has(token.path) && isShadow(token.value)) return shadowProblems(token);
   const { allowed, what } = mayPointAt(token.path);
   const target = referenceIn(token.value);
   if (!target) return [`${token.file}: ${token.path} holds a value. It should point at ${what}.`];
   if (!allowed.has(target)) return [`${token.file}: ${token.path} points at {${target}}, which is not ${what}.`];
   return [];
 };
-check('Every token points one layer down, or at a step of the brand ramp',
+check('Every token points one layer down, or at a step of the brand ramp, and a shadow its colour at color.shadow',
   [...semantics, ...components, ...brandFolder, ...modes, ...densities].flatMap(pointsDown));
 
 // 3. The demo reads semantic tokens, never a primitive and never a step of the
@@ -266,11 +297,17 @@ const builtSemantics = blocks.flatMap(({ selector, declarations }) =>
 
 // 5. In the built CSS, every semantic and component token is still a reference.
 //    light-dark() of two references counts as one: it is how the build writes
-//    a semantic whose dark answer differs from its light one.
+//    a semantic whose dark answer differs from its light one. A shadow counts
+//    when every part is a reference, its offsets, blur, spread and colour, as
+//    in var(--size-0) var(--size-50) var(--size-100) var(--size-0)
+//    var(--color-shadow-resting), with inset in front when it has it, and a
+//    list of shadows when each one is.
 const VAR = String.raw`var\(\s*--[\w-]+\s*\)`;
 const LIGHT_DARK = new RegExp(String.raw`^light-dark\(\s*${VAR}\s*,\s*${VAR}\s*\)$`);
-const isReference = (value) => value.startsWith('var(') || LIGHT_DARK.test(value);
-check('Every semantic and component token in dist/tokens.css is a var() reference, or light-dark() of two', builtSemantics
+const ONE_SHADOW = String.raw`(?:inset\s+)?${VAR}(?:\s+${VAR}){2,4}`;
+const SHADOW = new RegExp(String.raw`^${ONE_SHADOW}(?:\s*,\s*${ONE_SHADOW})*$`);
+const isReference = (value) => new RegExp(`^${VAR}$`).test(value) || LIGHT_DARK.test(value) || SHADOW.test(value);
+check('Every semantic and component token in dist/tokens.css is a var() reference, light-dark() of two, or a shadow whose every part is a var() reference', builtSemantics
   .filter(({ value }) => !isReference(value))
   .map(({ name, value, selector }) => `${name} is baked to ${value} under ${selector}. A brand that re-points what it reads will not reach it.`));
 
@@ -370,7 +407,9 @@ check(`Semantic and component tokens are declared on :root and on the attribute 
 //    in tokens/primitives/color.json, so a new ramp is covered once it is added.
 //    Grey and gray count as the same word. The brand ramp, color.brand.<step>,
 //    is the one colour semantic that names no job: its steps are numbers.
-const ROLES = ['surface', 'fill', 'text', 'border'];
+//    The shadow role is the colour of each elevation's shadow, named for the
+//    height it colours, as color.shadow.raised colours elevation.raised.
+const ROLES = ['surface', 'fill', 'text', 'border', 'shadow'];
 const sameWord = (word) => (word.toLowerCase() === 'grey' ? 'gray' : word.toLowerCase());
 const rampFile = join('tokens', 'primitives', 'color.json');
 const ramps = new Set(
@@ -433,8 +472,16 @@ const withWords = (path, words) => {
   return words.length > 0 ? [...parts, words.join('-')].join('.') : undefined;
 };
 // focus on its own is a job, the ring's colour, as in color.border.focus.
+// Under the shadow role the intent is the name of a height in
+// elevation.json, so color.shadow.resting names the resting height, not a
+// control at rest.
+const namesHeight = (path) => {
+  const [first, role, intent, ...extra] = path.split('.');
+  return first === 'color' && role === 'shadow' && extra.length === 0 && semanticNames.has(`elevation.${intent}`);
+};
 const stateWordProblems = ({ path, file }) => {
   const words = path.split('.').at(-1).split('-');
+  if (namesHeight(path)) return [];
   return words
     .filter((word) => Object.hasOwn(STATE_WORDS, word) && !(word === 'focus' && words.length === 1))
     .map((word) => {
@@ -471,7 +518,7 @@ check('Semantic colours are named color.<role>.<intent> after a job, not a colou
       } else if (first !== 'color' || !intent || extra.length > 0 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(intent)) {
         problems.push(`${file}: ${path} should be named color.<role>.<intent>, with an optional -state at the end, as in color.fill.brand-hover.`);
       } else if (!ROLES.includes(role)) {
-        problems.push(`${file}: ${path} has the role "${role}". The role is surface, fill, text or border.`);
+        problems.push(`${file}: ${path} has the role "${role}". The role is surface, fill, text, border or shadow.`);
       }
       const colourWords = new Set(path.split(/[.-]/).filter((word) => ramps.has(sameWord(word))));
       for (const word of colourWords) {

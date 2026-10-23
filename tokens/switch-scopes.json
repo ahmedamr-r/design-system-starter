@@ -8,11 +8,11 @@
     "mayChange": "tokens/brands/_template.json"
   },
   "mode": {
-    "$description": "dark.json, picked by data-mode, which sets color-scheme. It answers the colour semantics but the steps of the brand ramp. It needs no attribute to declare them on: the build writes each one whose answers differ as light-dark(), and light-dark() picks its answer where the colour is used.",
+    "$description": "dark.json, picked by data-mode, which sets color-scheme. It answers the colour semantics but the steps of the brand ramp, the shadows' colours under color.shadow included. It never changes an elevation itself, so a shadow keeps its shape in both modes. It needs no attribute to declare them on: the build writes each one whose answers differ as light-dark(), and light-dark() picks its answer where the colour is used.",
     "folder": "tokens/modes",
     "block": null,
     "declaredOn": null,
-    "mayChange": ["color.surface", "color.fill", "color.text", "color.border"]
+    "mayChange": ["color.surface", "color.fill", "color.text", "color.border", "color.shadow"]
   },
   "locale": {
     "$description": "One file per language whose type differs from the default, picked by lang. :lang() matches the language and every regional code that starts with it.",

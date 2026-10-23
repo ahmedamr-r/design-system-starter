@@ -72,7 +72,8 @@ body {
   letter-spacing: var(--type-label-letter-spacing);
 }
 
-/* Comes after [data-mode], so a card that sets a mode keeps the card surface. */
+/* Comes after [data-mode], so a card that sets a mode keeps the card surface.
+   A card sits on the page, so it asks for the resting height by name. */
 .card {
   display: grid;
   gap: var(--space-gap-medium);
@@ -81,6 +82,7 @@ body {
   color: var(--color-text-default);
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-surface);
+  box-shadow: var(--elevation-resting);
 }
 
 .card-head {
@@ -383,4 +385,62 @@ body {
   background: var(--color-fill-info-subtle);
   color: var(--color-text-info);
   border-color: var(--color-border-info);
+}
+
+/* The elevation panels: the three heights side by side on the page, each a
+   tile that asks for its height by name and paints the surface that goes
+   with it. Resting is a card, on the card surface; raised, a menu, and
+   floating, a dialog, sit on the raised surface, which in dark is a step
+   lighter than a card. Each tile sets its own text colour, the pairs
+   tokens/contrast-pairs.json measures. The row starts at the start edge, so
+   in Arabic resting is on the right. */
+.heights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-gap-large);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.height {
+  display: grid;
+  gap: var(--space-gap-small);
+  padding: var(--space-padding-large);
+  border-radius: var(--radius-surface);
+  color: var(--color-text-default);
+}
+
+.height[data-height="resting"] {
+  background: var(--color-surface-default);
+  box-shadow: var(--elevation-resting);
+}
+
+.height[data-height="raised"] {
+  background: var(--color-surface-raised);
+  box-shadow: var(--elevation-raised);
+}
+
+.height[data-height="floating"] {
+  background: var(--color-surface-raised);
+  box-shadow: var(--elevation-floating);
+}
+
+.height-name {
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line-height);
+  letter-spacing: var(--type-label-letter-spacing);
+}
+
+/* The CSS variable the tile reads, as code, in secondary text: the colour the
+   raised surface had to stay dark enough for. It keeps a lang and dir of its
+   own in every panel, set by demo.js, and reads the same label role as the
+   name above it. */
+.height-token {
+  color: var(--color-text-subtle);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line-height);
+  letter-spacing: var(--type-label-letter-spacing);
 }

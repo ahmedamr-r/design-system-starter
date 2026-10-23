@@ -4,7 +4,8 @@
     "$description": "The dark answer for every colour semantic. Where dark is the same as light it still says so, so a semantic added later cannot be left out.",
     "surface": {
       "page": { "$value": "{color.gray.950}" },
-      "default": { "$value": "{color.gray.900}" }
+      "default": { "$value": "{color.gray.900}" },
+      "raised": { "$value": "{color.gray.850}" }
     },
     "fill": {
       "brand": { "$value": "{color.brand.600}" },
@@ -45,6 +46,11 @@
       "critical": { "$value": "{color.red.400}" },
       "info": { "$value": "{color.blue.400}" },
       "disabled": { "$value": "{color.gray.700}" }
+    },
+    "shadow": {
+      "resting": { "$value": "{color.black.32}" },
+      "raised": { "$value": "{color.black.48}" },
+      "floating": { "$value": "{color.black.64}" }
     }
   }
 }

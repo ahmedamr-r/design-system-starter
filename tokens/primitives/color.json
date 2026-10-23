@@ -13,8 +13,21 @@
       "600": { "$value": { "colorSpace": "oklch", "components": [0.54, 0.011, 260], "hex": "#6b6f75" } },
       "700": { "$value": { "colorSpace": "oklch", "components": [0.46, 0.009, 260], "hex": "#55585d" } },
       "800": { "$value": { "colorSpace": "oklch", "components": [0.38, 0.006, 260], "hex": "#404246" } },
+      "850": {
+        "$value": { "colorSpace": "oklch", "components": [0.33, 0.005, 260], "hex": "#343538" },
+        "$description": "Breaks the even steps on purpose, at lightness 0.33 between 800 (0.38) and 900 (0.30). A raised surface in dark mode, such as a menu or a dialog, has to be lighter than a card (900) to show its lift, and dark enough that secondary text (400) still reaches 4.5:1 on it. 800 is too light for that, at 3.78:1, and this step reaches 4.61:1."
+      },
       "900": { "$value": { "colorSpace": "oklch", "components": [0.3, 0.004, 260], "hex": "#2d2e30" } },
       "950": { "$value": { "colorSpace": "oklch", "components": [0.21, 0.004, 260], "hex": "#17181a" } }
+    },
+    "black": {
+      "$description": "Black at part opacity, so whatever is behind it shows through. Unlike the ramps here, a step is named by its opacity in percent, not its lightness: 12 is black at 12%.",
+      "8": { "$value": { "colorSpace": "oklch", "components": [0, 0, 0], "alpha": 0.08, "hex": "#000000" } },
+      "12": { "$value": { "colorSpace": "oklch", "components": [0, 0, 0], "alpha": 0.12, "hex": "#000000" } },
+      "16": { "$value": { "colorSpace": "oklch", "components": [0, 0, 0], "alpha": 0.16, "hex": "#000000" } },
+      "32": { "$value": { "colorSpace": "oklch", "components": [0, 0, 0], "alpha": 0.32, "hex": "#000000" } },
+      "48": { "$value": { "colorSpace": "oklch", "components": [0, 0, 0], "alpha": 0.48, "hex": "#000000" } },
+      "64": { "$value": { "colorSpace": "oklch", "components": [0, 0, 0], "alpha": 0.64, "hex": "#000000" } }
     },
     "blue": {
       "50": { "$value": { "colorSpace": "oklch", "components": [0.97, 0.011, 255], "hex": "#f0f6fd" } },
