@@ -15,33 +15,38 @@ npm run demo    # build, then open the side-by-side demo
 
 The demo needs `npm run demo`, which builds the tokens and serves the page. Opened straight from the folder, it cannot read the list of brands it builds its panels from. It also needs a browser from 2024 or later, since dark mode is written with `light-dark()`.
 
-## What is inside at `part-4-modes`
+## What is inside at `part-5-rtl`
 
 ```
 tokens/
-  primitives/   raw values: colour ramps, sizes, fonts
+  primitives/   raw values: colour ramps, sizes, fonts, line heights
   semantics/    jobs (color.fill.brand), each pointing at a primitive or a step
                 of the brand ramp, which is gray until a brand picks a hue
   components/   button.json only: one brand restyles buttons on their own
   brands/       one file per brand, pointing the brand ramp at one hue, and
                 _template.json, which every new brand is copied from
   modes/        dark.json, the dark answer for every colour semantic
-  locales/      empty until part five
+  locales/      ar.json, the Arabic font and line height, picked by lang
   contrast-pairs.json  each text and focus colour, where it sits, its ratio
 scripts/
   build.js      Style Dictionary 5, keeping every reference as var() or
-                light-dark(), and writing the list of brands
-  check.js      fourteen checks that fail with a plain message
+                light-dark(), writing the list of brands, and each locale as
+                a :lang() block after the brands
+  check.js      twenty-five checks that fail with a plain message
   lib/
     resolve.js  works out the colour a token comes to, for the contrast check
 .github/
   CODEOWNERS    the owner reviews any change outside the brand files
+  pull_request_template.md  a line for what was looked at in English, and
+                one for Arabic
   workflows/
     check.yml   runs the build and the check on every pull request
 demo/           the same card for no brand and for each brand, in light and
-                dark, and inside one another
+                dark, and inside one another, each in English and then in
+                Arabic, with its words in copy.json
 prompts/        the prompt behind each step
-AGENTS.md       how to work here, and the rules for tokens, modes and brands
+AGENTS.md       how to work here, and the rules for tokens, modes, brands,
+                language and direction, and numbers
 ```
 
 ## One prompt, one commit
@@ -82,6 +87,20 @@ AGENTS.md       how to work here, and the rules for tokens, modes and brands
 | Add Sun from the template | [06-new-client](prompts/4-modes/06-new-client.md) |
 | Add the rules for modes and brands | [07-mode-and-brand-rules](prompts/4-modes/07-mode-and-brand-rules.md) |
 | Make the owner review what a client may not change | [08-code-owners](prompts/4-modes/08-code-owners.md) |
+
+### Part five, right to left, and every language
+
+| Commit | Prompt |
+| --- | --- |
+| No commit, it only counts what a product's CSS says about left and right | [00-count-left-and-right](prompts/5-rtl/00-count-left-and-right.md) |
+| Show the demo right to left | [01-rtl-panels](prompts/5-rtl/01-rtl-panels.md) |
+| Fail on physical left and right | [02-no-left-right](prompts/5-rtl/02-no-left-right.md) |
+| Give line height a token | [03-line-height](prompts/5-rtl/03-line-height.md) |
+| No commit, it makes a throwaway page outside the repository | [04-compare-line-heights](prompts/5-rtl/04-compare-line-heights.md) |
+| Add the Arabic locale | [05-arabic-locale](prompts/5-rtl/05-arabic-locale.md) |
+| Mirror the icons that point somewhere | [06-icons](prompts/5-rtl/06-icons.md) |
+| Format numbers through Intl | [07-intl](prompts/5-rtl/07-intl.md) |
+| Check every change in both directions | [08-both-directions](prompts/5-rtl/08-both-directions.md) |
 
 To follow along from scratch, start an empty folder and give your agent the prompts in order. In your own repository each prompt would be its own branch and pull request. Here each one is a single commit, so you can compare your agent's work with mine.
 

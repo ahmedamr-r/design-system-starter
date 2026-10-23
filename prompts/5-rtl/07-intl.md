@@ -1,0 +1,5 @@
+Take the numbers out of the demo's copy. The price becomes an amount and a currency, 24 and USD, and the trial length a number, 14. Keep all three as data in demo/demo.js, with no new file, and have the Arabic and English sentences show where the trial length goes. Format both with Intl.NumberFormat for the language of the panel they sit in, with no decimals when the amount is whole, using formatToParts so the currency symbol goes in a <bdi> of its own. Leave the price slot in index.html empty.
+
+Add one more Arabic copy of the panel with no brand, in lang="ar-EG", and tell me why its digits differ from the other Arabic panels. Then show me what lang="ar-EG-u-nu-latn" does to it, and put it back.
+
+Add the rules to AGENTS.md in a Numbers section. It should cover what stays left to right inside Arabic, that anything a user typed goes in a <bdi>, that phone numbers, email addresses and code keep dir="ltr" on their own element, and that logos never flip. Make the check fail when the copy writes a digit or when the HTML's price slot is not empty.

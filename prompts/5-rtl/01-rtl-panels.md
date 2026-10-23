@@ -1,0 +1,5 @@
+Show every card in the demo in Arabic too, next to its English copy. Keep one card template, and move its words into demo/copy.json with an English and an Arabic version of each string. Leave the price as it is for now, and list each Arabic string beside its English so I can check the translation.
+
+Each Arabic panel gets lang="ar" and dir="rtl". Work out the dir from the language with Intl.Locale instead of typing it, put dir="ltr" next to lang="en" on the html element, and keep the panel labels in English with a lang and dir of their own. Don't change any CSS.
+
+Add a Language and direction section to AGENTS.md saying that lang and dir always go together and that the direction comes from the language, never typed. Add checks, after the ones that are there, that fail when an element in the demo's HTML has one without the other or a dir that doesn't match its language, when the demo's script types a direction instead of asking Intl.Locale, and when a language in copy.json is missing a string the English has. Then tell me what moved in the Arabic panels, and why.

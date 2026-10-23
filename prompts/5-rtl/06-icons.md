@@ -1,0 +1,3 @@
+Put an arrow after the label of the card's main button, as an inline SVG with data-icon="arrow-forward". Name icons for where they lead, forward or back, never left or right, and give every icon that points somewhere a name ending in -forward or -back, so its name alone decides whether it turns. In the demo CSS, turn those icons around under right to left with one rule that matches them by name and uses :dir(rtl), so no page ever checks the direction.
+
+Add to AGENTS.md which icons turn around and which never do. Make the check fail on an icon named left or right, and let that one icon rule be the only CSS that asks for the direction or flips something with a negative scale.

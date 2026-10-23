@@ -1,0 +1,3 @@
+Add a check that fails when any CSS in the repository, apart from node_modules and built files, names a physical side: margin-left, padding-right, border-left, left and right, the four corner radii, text-align, float or clear set to left or right, or a margin, padding or inset shorthand whose left and right values differ. Each message names the file and line and the logical property to use instead. Make it fail too when CSS sets the direction property, when a token's $description uses left or right for a side, and when any CSS checks the direction with [dir] or :dir(), or flips something with a negative scale.
+
+Fix whatever it finds. Then add a margin-left to demo/demo.css to show me the message, and take it out. Add the rule to AGENTS.md.

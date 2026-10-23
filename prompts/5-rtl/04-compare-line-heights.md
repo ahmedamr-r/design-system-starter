@@ -1,0 +1,1 @@
+Make me a throwaway page outside this repository that sets the card's Arabic copy from demo/copy.json in IBM Plex Sans Arabic at line heights 1.5, 1.7 and 1.9 side by side, with the English copy at 1.5 beside them, all at 14 pixels, the size of the card's text. Load the font from Google Fonts on that page only. Tell me how to open it, and don't change anything in the repository.
