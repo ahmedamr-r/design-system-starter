@@ -20,7 +20,9 @@
     <!-- The card every panel shows. demo.js copies it, and sets data-brand on a copy where a case needs one.
          Its words are in copy.json: demo.js puts the string named by each data-copy in the panel's
          language, and gives a list one item per string, each with the tick. The button's label has a span
-         of its own, so filling it in keeps the arrow after it. The price is typed here for now. -->
+         of its own, so filling it in keeps the arrow after it. The price slot, data-price, stays empty:
+         the price is data in demo.js, which formats it for the panel's language and puts it here.
+         npm run check fails if anything is typed in it. -->
     <template id="card">
       <article class="card">
         <header class="card-head">
@@ -28,7 +30,7 @@
           <span class="tag" data-copy="plans.studio.tag"></span>
         </header>
         <p class="lede" data-copy="plans.studio.pitch"></p>
-        <p class="price"><span class="amount">$24</span> <span data-copy="card.unit"></span></p>
+        <p class="price"><span class="amount" data-price></span> <span data-copy="card.unit"></span></p>
         <ul class="features" data-copy="plans.studio.features">
           <li><svg class="tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.25l2.25 2.25 4.75-5" /></svg></li>
         </ul>

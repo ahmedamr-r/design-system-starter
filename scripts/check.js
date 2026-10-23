@@ -8,8 +8,9 @@
 // that same CSS again for line heights that read no token, then the files in
 // tokens/locales/, that same CSS once more for italics and capitals, and last
 // the icon names in the HTML, the demo's script, the CSS and the .svg files,
-// for any named left or right. It prints one line per check, and exits with an
-// error if any fail.
+// for any named left or right, and last demo/copy.json for digits and the
+// demo's HTML for a price typed in the price slot. It prints one line per
+// check, and exits with an error if any fail.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { resolver } from './lib/resolve.js';
@@ -1060,6 +1061,45 @@ const iconNameProblem = ({ where, name }) => {
 check('No icon is named left or right, and every name with forward or back ends in it', iconNames
   .flatMap(iconNameProblem)
   .sort((a, b) => a.localeCompare(b, 'en', { numeric: true })), { all: true });
+
+// 24. Numbers are data, not words. No string in demo/copy.json writes a digit,
+//     in any script: 0 to 9, Arabic-Indic or any other, since a digit typed in
+//     the copy is in one language's digits and is never formatted for the
+//     others. The price and the trial length live in demo/demo.js, which
+//     formats them with Intl.NumberFormat for the panel's language, and a
+//     string marks where one goes, as {days}. The template's price slot, the
+//     element with data-price, must be there and empty, since demo.js puts the
+//     formatted price in it. Keys that start with $ are notes. Comments in the
+//     HTML are blanked, as in check 15.
+const DIGIT = /\p{Nd}/u;
+const stringsIn = (value, name) => (Array.isArray(value)
+  ? value.flatMap((item, i) => stringsIn(item, `${name}, item ${i + 1}`))
+  : typeof value === 'string' ? [{ name, text: value }] : []);
+const digitProblems = copyFile
+  ? Object.entries(copyFile)
+      .filter(([language, strings]) => !language.startsWith('$') && typeof strings === 'object' && strings !== null)
+      .flatMap(([language, strings]) => Object.entries(strings)
+        .filter(([name]) => !name.startsWith('$'))
+        .flatMap(([name, value]) => stringsIn(value, name))
+        .filter(({ text }) => DIGIT.test(text))
+        .map(({ name, text }) => `${COPY}: ${language} ${name} writes a digit: "${text}". Numbers are data in demo/demo.js, formatted for each panel's language. Put the number there and mark where it goes in the string, as {days}.`))
+  : [];
+const PRICE_SLOT = /<([a-z][\w-]*)(?=[\s>])[^>]*\sdata-price(?=[\s=>/])[^>]*>/gi;
+const priceProblems = demoFiles
+  .filter(({ file }) => file.endsWith('.html'))
+  .flatMap(({ file, text }) => [...text.matchAll(PRICE_SLOT)].map(({ 0: open, 1: name, index }) => {
+    const after = text.slice(index + open.length);
+    if (new RegExp(`^\\s*</${name}\\s*>`, 'i').test(after)) return undefined;
+    const held = after.slice(0, after.search(new RegExp(`</${name}\\s*>`, 'i'))).trim().replace(/\s+/g, ' ');
+    return `${file}:${lineAt(text, index)} <${name.toLowerCase()} data-price> holds "${held.slice(0, 60)}". Leave the price slot empty: demo.js formats the price for the panel's language and puts it there.`;
+  }).filter(Boolean));
+const priceSlots = demoFiles
+  .filter(({ file }) => file.endsWith('.html'))
+  .reduce((count, { text }) => count + [...text.matchAll(PRICE_SLOT)].length, 0);
+if (existsSync('demo') && priceSlots === 0) {
+  priceProblems.push('The demo\'s HTML has no price slot. The card\'s price goes in an empty element with data-price, such as <span class="amount" data-price></span>, which demo.js fills.');
+}
+check(`No string in ${COPY} writes a digit, and the price slot in the demo's HTML is empty`, [...digitProblems, ...priceProblems], { all: true });
 
 if (failed > 0) {
   console.log(`\n${failed} check${failed === 1 ? '' : 's'} failed.`);
