@@ -1,0 +1,3 @@
+Widen the check that the demo reads only variables the build writes to every CSS file in the repository and the CSS inside every HTML file, apart from node_modules and built files. A variable the same file declares is fine. A var() with a fallback counts too, because the fallback hides the missing token. Each message names the file, the line and the closest name that does exist. Add a check that fails when dist/tokens.css holds a value CSS can't read, such as undefined or [object Object].
+
+Then misspell one variable in demo/demo.css, once with a fallback and once without, to show me the message, and put it back. Add both rules to AGENTS.md.

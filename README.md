@@ -15,26 +15,36 @@ npm run demo    # build, then open the side-by-side demo
 
 The demo needs `npm run demo`, which builds the tokens and serves the page. Opened straight from the folder, it cannot read the list of brands it builds its panels from. It also needs a browser from 2024 or later, since dark mode is written with `light-dark()`.
 
-## What is inside at `part-5-rtl`
+## What is inside at `part-6-tokens`
 
 ```
 tokens/
-  primitives/   raw values: colour ramps, sizes, fonts, line heights
+  primitives/   raw values: colour ramps, sizes, fonts, line heights,
+                durations, curves and stacking numbers
   semantics/    jobs (color.fill.brand), each pointing at a primitive or a step
-                of the brand ramp, which is gray until a brand picks a hue
+                of the brand ramp, which is gray until a brand picks a hue:
+                colour, type roles, spacing, focus, elevation, lines, motion
+                and layers
   components/   button.json only: one brand restyles buttons on their own
   brands/       one file per brand, pointing the brand ramp at one hue, and
                 _template.json, which every new brand is copied from
   modes/        dark.json, the dark answer for every colour semantic
-  locales/      ar.json, the Arabic font and line height, picked by lang
+  locales/      ar.json, the Arabic font and line heights, picked by lang
+  densities/    compact.json, every padding and gap one step down, picked by
+                data-density
+  preferences/  reduced-motion.json, movement that takes no time, picked by
+                the reader's own setting
+  switch-scopes.json   which tokens each switch may change, for the build
+                and the check
   contrast-pairs.json  each text and focus colour, where it sits, its ratio
 scripts/
   build.js      Style Dictionary 5, keeping every reference as var() or
-                light-dark(), writing the list of brands, and each locale as
-                a :lang() block after the brands
-  check.js      twenty-five checks that fail with a plain message
+                light-dark(), writing the list of brands, and each switch
+                file as its own block after the declarations
+  check.js      thirty-one checks that fail with a plain message
   lib/
     resolve.js  works out the colour a token comes to, for the contrast check
+    scopes.js   reads switch-scopes.json for the build and the check
 .github/
   CODEOWNERS    the owner reviews any change outside the brand files
   pull_request_template.md  a line for what was looked at in English, and
@@ -42,11 +52,13 @@ scripts/
   workflows/
     check.yml   runs the build and the check on every pull request
 demo/           the same card for no brand and for each brand, in light and
-                dark, and inside one another, each in English and then in
-                Arabic, with its words in copy.json
+                dark, inside one another and in a compact panel, then status
+                colours, states, elevation and layers, each in English and
+                then in Arabic, with its words in copy.json
 prompts/        the prompt behind each step
-AGENTS.md       how to work here, and the rules for tokens, modes, brands,
-                language and direction, and numbers
+AGENTS.md       how to work here, and the rules for tokens, focus, elevation,
+                lines, layers, motion, spacing, modes, brands, language and
+                direction, type, and numbers
 ```
 
 ## One prompt, one commit
@@ -101,6 +113,23 @@ AGENTS.md       how to work here, and the rules for tokens, modes, brands,
 | Mirror the icons that point somewhere | [06-icons](prompts/5-rtl/06-icons.md) |
 | Format numbers through Intl | [07-intl](prompts/5-rtl/07-intl.md) |
 | Check every change in both directions | [08-both-directions](prompts/5-rtl/08-both-directions.md) |
+
+### Part six, the tokens after colour
+
+| Commit | Prompt |
+| --- | --- |
+| No commit, it only reads a product's CSS | [00-inventory](prompts/6-tokens/00-inventory.md) |
+| Add status colours | [01-status](prompts/6-tokens/01-status.md) |
+| Name the states | [02-states](prompts/6-tokens/02-states.md) |
+| Give focus its own tokens | [03-focus](prompts/6-tokens/03-focus.md) |
+| Fail on a variable nobody writes | [04-missing-variables](prompts/6-tokens/04-missing-variables.md) |
+| Add type roles | [05-type-roles](prompts/6-tokens/05-type-roles.md) |
+| Settle the spacing roles | [06-spacing](prompts/6-tokens/06-spacing.md) |
+| Add a density switch | [07-density](prompts/6-tokens/07-density.md) |
+| Add elevation | [08-elevation](prompts/6-tokens/08-elevation.md) |
+| Add motion tokens | [09-motion](prompts/6-tokens/09-motion.md) |
+| Add layers and border widths | [10-layers](prompts/6-tokens/10-layers.md) |
+| Fail on values typed by hand | [11-own-values](prompts/6-tokens/11-own-values.md) |
 
 To follow along from scratch, start an empty folder and give your agent the prompts in order. In your own repository each prompt would be its own branch and pull request. Here each one is a single commit, so you can compare your agent's work with mine.
 

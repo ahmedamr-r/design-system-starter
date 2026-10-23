@@ -1,0 +1,3 @@
+Add a check that fails when CSS sets a property the tokens cover with a value of its own: font sizes, weights, families, line heights and letter spacing, padding, margins and gaps, radii, border widths, shadows, z-index, and transition durations and curves. 0, none, inherit and auto are fine. A line height of 1 is no longer an exception. A value that is one component's own business may stay if its line carries a comment that starts with own: and says why. Fold the line height check and the z-index check into this one.
+
+Run it on the demo, and for each value it finds, tell me whether it should become a token or stay as the component's own, and why. Add the rule to AGENTS.md: a value earns a token when more than one place shares it or a switch has to change it.
