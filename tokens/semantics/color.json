@@ -38,7 +38,7 @@
     },
     "border": {
       "default": { "$value": "{color.gray.200}", "$description": "Card edges and dividers." },
-      "focus": { "$value": "{color.brand.600}", "$description": "The keyboard focus ring." },
+      "focus": { "$value": "{color.brand.600}", "$description": "The keyboard focus ring's colour. Its thickness and its gap from the control are focus.width and focus.offset, in focus.json." },
       "success": { "$value": "{color.green.600}", "$description": "The edge of a success notice." },
       "warning": { "$value": "{color.yellow.600}", "$description": "The edge of a warning notice." },
       "critical": { "$value": "{color.red.600}", "$description": "The edge of a critical notice." },

@@ -9,9 +9,10 @@
 // tokens/locales/, that same CSS once more for italics and capitals, and last
 // the icon names in the HTML, the demo's script, the CSS and the .svg files,
 // for any named left or right, and last demo/copy.json for digits and the
-// demo's HTML for a price typed in the price slot, and at the very end that
-// demo/copy.json still holds a language that reads right to left. It prints
-// one line per check, and exits with an error if any fail.
+// demo's HTML for a price typed in the price slot, then that demo/copy.json
+// still holds a language that reads right to left, and at the very end that
+// every focus style in the CSS keeps its outline and draws no box-shadow. It
+// prints one line per check, and exits with an error if any fail.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { resolver } from './lib/resolve.js';
@@ -1218,6 +1219,48 @@ if (!copyFile) {
   rightToLeftProblems.push(`${COPY} holds no language that reads right to left. It holds ${held}. The demo shows one set of panels per language in ${COPY}, so without one there is nothing to look at right to left. Put the Arabic set back, or add another language that reads right to left, such as he or fa, with every string English has.`);
 }
 check(`${COPY} holds a language that reads right to left, so the demo always shows that direction`, rightToLeftProblems, { all: true });
+
+// 26. A focus style keeps its outline and draws no box-shadow. The focus ring
+//     is an outline, read from focus.width, focus.offset and
+//     color.border.focus. Forced colours modes, such as Windows High
+//     Contrast, drop every box-shadow but keep the outline, redrawn in the
+//     reader's own colours, so a ring drawn with box-shadow, or a focus style
+//     that takes the outline away, leaves a keyboard user there with no ring.
+//     A focus style is a rule whose selector has :focus, :focus-visible or
+//     :focus-within, leaving out what sits inside :not(), or
+//     [data-state="focus"], the demo's stand-in for the keyboard. It reads the
+//     same CSS as check 18. The outline is taken away by none or hidden, by a
+//     width of 0, by transparent, and by initial or unset, which set it back
+//     to none.
+const FOCUS_SELECTOR = /:focus(?:-visible|-within)?(?![\w-])|\[\s*data-state\s*=\s*(["']?)focus\1\s*\]/i;
+const NOT = /:not\((?:[^()]|\([^()]*\))*\)/gi;
+const isFocusSelector = (prelude) => !prelude.startsWith('@') && FOCUS_SELECTOR.test(prelude.replace(NOT, ''));
+const ZERO = /^[+-]?(?:0+\.?0*|\.0+)[a-z]*$/i;
+const RING = 'outline: var(--focus-width) solid var(--color-border-focus) and outline-offset: var(--focus-offset)';
+const removesOutline = ({ property, value }) => {
+  const parts = partsOf(value.toLowerCase());
+  const whole = parts.join(' ');
+  if (['outline', 'outline-style'].includes(property) && (['initial', 'unset'].includes(whole) || parts.some((part) => part === 'none' || part === 'hidden'))) return true;
+  if (['outline', 'outline-width'].includes(property) && parts.some((part) => ZERO.test(part))) return true;
+  if (['outline', 'outline-color'].includes(property) && parts.includes('transparent')) return true;
+  return false;
+};
+const focusRules = new Map(preludes.filter(({ prelude }) => isFocusSelector(prelude)).map((selector) => [selector.rule, selector]));
+check('Every focus style keeps its outline, and none draws a ring with box-shadow', declarations
+  .filter(({ rule }) => focusRules.has(rule))
+  .flatMap((declaration) => {
+    const { file, line, property, value } = declaration;
+    const { prelude } = focusRules.get(declaration.rule);
+    const where = `${file}:${line}`;
+    if (property === 'box-shadow' && value.toLowerCase() !== 'none') {
+      return [`${where} draws a focus ring with box-shadow: ${value}, in "${prelude}". Forced colours modes, such as Windows High Contrast, drop every box-shadow, so the ring would vanish there. Draw it with ${RING}.`];
+    }
+    if (removesOutline(declaration)) {
+      return [`${where} takes the outline away with ${property}: ${value}, in "${prelude}". The outline is the focus ring, so a keyboard user would lose track of where they are. Keep ${RING}; :focus-visible already shows it to the keyboard and not to a click.`];
+    }
+    return [];
+  })
+  .sort((a, b) => a.localeCompare(b, 'en', { numeric: true })), { all: true });
 
 if (failed > 0) {
   console.log(`\n${failed} check${failed === 1 ? '' : 's'} failed.`);

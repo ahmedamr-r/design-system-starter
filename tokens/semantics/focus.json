@@ -1,0 +1,8 @@
+{
+  "focus": {
+    "$type": "dimension",
+    "$description": "The keyboard focus ring's size and place. Its colour is color.border.focus, in color.json. Every link and button draws the ring from all three, as an outline, never a box-shadow.",
+    "width": { "$value": "{size.50}", "$description": "How thick the focus ring is." },
+    "offset": { "$value": "{size.50}", "$description": "The gap between a control's edge and its focus ring, so the ring sits on the card or the page around the control, never on the control's own fill." }
+  }
+}

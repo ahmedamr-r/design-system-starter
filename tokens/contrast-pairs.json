@@ -28,7 +28,7 @@
   "color.border.focus": {
     "ratio": 3,
     "on": ["color.surface.page", "color.surface.default"],
-    "$description": "The ring sits 2px outside the link or button it marks, so it is drawn on the card or the page, not on the button's fill."
+    "$description": "The ring sits focus.offset outside the link or button it marks, so it is drawn on what is around it, never on the button's fill. That is the page for the comparison link beside a card, and the card for the card's button and link and for every button in the states row, the focused one included. Nothing else in the demo takes focus: the status card has no link or button."
   },
   "color.text.success": {
     "ratio": 4.5,

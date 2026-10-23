@@ -16,7 +16,7 @@
 // A brand never re-points a status, so they come out the same in every brand.
 //
 // Last the states panels: 8. the card's main button at rest, under the
-// pointer, pressed and disabled, side by side, for no brand and each brand, in
+// pointer, pressed, focused and disabled, side by side, for no brand and each brand, in
 // light and in dark. The names of the states are the demo's own labels, like
 // the panel labels, so they stay in the page's language.
 //
@@ -196,14 +196,15 @@ function statusCard({ language }) {
   return statusCopy;
 }
 
-// The card's main button in each of its states. hover and pressed are shown
-// with data-state, which demo.css paints the same as the pointer would, and
-// disabled is the real attribute. The labels are the demo's own words, in the
-// page's language.
+// The card's main button in each of its states. hover, pressed and focus are
+// shown with data-state, which demo.css paints the same as the pointer or the
+// keyboard would, and disabled is the real attribute. The labels are the
+// demo's own words, in the page's language.
 const buttonStates = [
   { label: 'At rest' },
   { label: 'Hover', state: 'hover' },
   { label: 'Pressed', state: 'pressed' },
+  { label: 'Focused', state: 'focus' },
   { label: 'Disabled', disabled: true },
 ];
 
@@ -312,8 +313,8 @@ for (const brand of [undefined, ...brands]) {
   }
 }
 
-// 8. The states panels: the main button at rest, under the pointer, pressed
-// and disabled, for no brand, then each brand, in light and in dark.
+// 8. The states panels: the main button at rest, under the pointer, pressed,
+// focused and disabled, for no brand, then each brand, in light and in dark.
 for (const brand of [undefined, ...brands]) {
   for (const mode of modes) {
     cases.push((language) => panel(

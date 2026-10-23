@@ -174,7 +174,8 @@ body {
 }
 
 /* Under the pointer, then pressed, each from the button's own token.
-   data-state shows the same state without a pointer, for the states row. */
+   data-state shows the same state without a pointer, for the states row, and
+   data-state="focus" the ring without a keyboard, in the focus rule below. */
 .button:hover,
 .button[data-state="hover"] {
   background: var(--button-background-hover);
@@ -231,16 +232,25 @@ body {
   justify-self: start;
 }
 
+/* The keyboard focus ring, from its three tokens: its colour, its width and
+   its gap from the control. The gap puts the ring on the card or the page
+   around the control, the surfaces tokens/contrast-pairs.json measures it on.
+   It is an outline, never a box-shadow: forced colours modes, such as Windows
+   High Contrast, drop every box-shadow but keep the outline, redrawn in the
+   reader's own colours. npm run check fails a focus style that removes the
+   outline or draws a ring with box-shadow. data-state="focus" shows the ring
+   without a keyboard, for the states row. */
 .link:focus-visible,
-.button:focus-visible {
-  outline: 2px solid var(--color-border-focus);
-  outline-offset: 2px;
+.button:focus-visible,
+.button[data-state="focus"] {
+  outline: var(--focus-width) solid var(--color-border-focus);
+  outline-offset: var(--focus-offset);
 }
 
-/* The states panels: the main button at rest, under the pointer, pressed and
-   disabled, side by side, each under the name of its state. The panel takes
-   the whole width of the page, so the four fit in one row, and they wrap on a
-   narrow screen. The row starts at the start edge, so in Arabic at rest is on
+/* The states panels: the main button at rest, under the pointer, pressed,
+   focused and disabled, side by side, each under the name of its state. The
+   panel takes the whole width of the page, so the five fit in one row, and
+   they wrap on a narrow screen. The row starts at the start edge, so in Arabic at rest is on
    the right. */
 .panel.wide {
   grid-column: 1 / -1;
