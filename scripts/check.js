@@ -17,7 +17,8 @@
 // role and a gap or a margin a gap role, then that every switch file sets
 // only what tokens/switch-scopes.json lets its switch change, and last of all
 // that every transition that moves something reads motion.duration.base or
-// motion.duration.slow, which reduced motion points at 0ms. Check 6 reads
+// motion.duration.slow, which reduced motion points at 0ms, and after it that
+// every z-index reads a layer from tokens/semantics/layer.json. Check 6 reads
 // that list too, for where each token is declared, and reads the rules inside
 // a media query in dist/tokens.css as sitting in it. Check 12, that the
 // CSS reads only variables
@@ -1684,6 +1685,68 @@ const missingMoving = MOVING_DURATIONS.filter((path) => !semanticNames.has(path)
 check('Every transition that moves something reads motion.duration.base or motion.duration.slow, so reduced motion reaches it', [
   ...missingMoving,
   ...transitionProblems.sort((a, b) => a.localeCompare(b, 'en', { numeric: true })),
+], { all: true });
+
+// 32. Every z-index reads a layer. Stacking order is four layers in
+//     tokens/semantics/layer.json, raised, sticky, overlay and toast, lowest
+//     first, and a page asks for one by name, as in
+//     z-index: var(--layer-overlay). A number of its own, such as 9999, or one
+//     worked out from a layer, such as calc(var(--layer-overlay) + 1), starts a
+//     race nobody can see from the tokens: the next one to need the top types a
+//     bigger number. Two things in one layer stack in the order they come in
+//     the page, so the overlay opened last sits on top with no number at all.
+//     It reads the same CSS as check 18. A z-index passes when it is exactly
+//     var() of a layer, or of a component token that points at one, with no
+//     fallback, or when it sets no number: auto, inherit, initial, unset,
+//     revert or revert-layer. That no script sets a z-index through an
+//     element's style is by hand.
+const LAYER = /^layer\.[^.]+$/;
+const layerTokens = [...semanticNames].filter((path) => LAYER.test(path));
+const layerList = layerTokens.length > 0
+  ? layerTokens.map((path) => `var(${cssName(path)})`).join(', ')
+  : 'none yet: add them to tokens/semantics/layer.json';
+// The layer a variable reaches, as a token path, or undefined: a layer itself,
+// or a semantic or component token that points at one, followed down.
+const layerOf = (name) => {
+  let path = pathOfCss.get(name);
+  const seen = new Set();
+  while (path && !seen.has(path)) {
+    if (LAYER.test(path) && semanticNames.has(path)) return path;
+    seen.add(path);
+    path = pointsAt.get(cssName(path));
+  }
+  return undefined;
+};
+const SETS_NO_NUMBER = new Set(['auto', 'inherit', 'initial', 'unset', 'revert', 'revert-layer']);
+const SAME_LAYER = 'To put one thing over another in the same layer, put it after the other in the page. A level no layer has is a new layer in tokens/semantics/layer.json, so ask for one rather than typing a number.';
+const zIndexProblems = declarations
+  .filter(({ property }) => property === 'z-index')
+  .flatMap(({ file, line, value }) => {
+    const where = `${file}:${line} sets z-index: ${value}`;
+    if (SETS_NO_NUMBER.has(value.toLowerCase())) return [];
+    const [, read, fallback] = value.match(/^var\(\s*(--[\w-]+)\s*(?:,\s*(.*?))?\s*\)$/) ?? [];
+    if (read && fallback !== undefined) {
+      return [`${where}, with a fallback. Drop the fallback, so the stacking order always comes from the layer: the fallback would hide a misspelt layer and the page would stack by the number instead.`];
+    }
+    if (read && layerOf(read)) return [];
+    if (read && primitiveCss.has(read)) {
+      return [`${where}, a primitive. Read the layer for that job instead: ${layerList}.`];
+    }
+    if (read) {
+      return [`${where}, which is not a layer. Read one that is: ${layerList}.`];
+    }
+    if (readsIn(value).some(layerOf)) {
+      return [`${where}, which works a number out from a layer. Read the layer as it is: ${layerList}. ${SAME_LAYER}`];
+    }
+    return [`${where}, a number of its own. Read a layer instead: ${layerList}. ${SAME_LAYER} To start a stacking order of its own without lifting anything, use isolation: isolate.`];
+  })
+  .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+const missingLayers = layerTokens.length === 0
+  ? ['tokens/semantics/layer.json has no layers. Every z-index reads one, such as layer.overlay.']
+  : [];
+check('Every z-index reads a layer, so stacking order comes from four names and never from a number', [
+  ...missingLayers,
+  ...zIndexProblems,
 ], { all: true });
 
 if (failed > 0) {

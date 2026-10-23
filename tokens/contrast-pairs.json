@@ -3,12 +3,12 @@
   "color.text.default": {
     "ratio": 4.5,
     "on": ["color.surface.page", "color.surface.default", "color.surface.raised"],
-    "$description": "Page and panel text on the page; titles, the price and the feature list on a card; the name of each height on the raised and floating tiles in the elevation panels."
+    "$description": "Page and panel text on the page, the sticky header's title included; titles, the price and the feature list on a card; the name of each height on the raised and floating tiles in the elevation panels; the name of each tile in the layers panels, on the page, the card and the raised surface."
   },
   "color.text.subtle": {
     "ratio": 4.5,
     "on": ["color.surface.page", "color.surface.default", "color.surface.raised"],
-    "$description": "Panel labels on the page; the lede and the price line on a card; the token each height reads, under its name on the raised and floating tiles. In dark the raised surface is gray 850, the lightest it can be with this text still at 4.5:1."
+    "$description": "Panel labels on the page, and the note in the sticky header; the lede and the price line on a card; the token each height reads, under its name on the raised and floating tiles, and the token each tile in the layers panels reads, on the page, the card and the raised surface. In dark the raised surface is gray 850, the lightest it can be with this text still at 4.5:1."
   },
   "color.text.brand": {
     "ratio": 4.5,

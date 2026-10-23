@@ -1,0 +1,22 @@
+{
+  "layer": {
+    "$type": "number",
+    "$description": "Stacking order: which of two things that overlap paints on top, as four layers, lowest first. A component asks for one by name, as in z-index: var(--layer-overlay), and never types a number of its own. Things in the same layer stack in the order they come in the page, so the one added last, such as the overlay opened last, sits on top. A layer says what is on top, and elevation says how high it looks: the two are set apart, so a menu reads layer.overlay and elevation.raised.",
+    "raised": {
+      "$value": "{z-index.100}",
+      "$description": "Something lifted above its neighbours, such as a card that lifts under the pointer over the cards beside it."
+    },
+    "sticky": {
+      "$value": "{z-index.200}",
+      "$description": "A header that stays put while the page scrolls under it, so whatever scrolls past goes under it, a lifted card included."
+    },
+    "overlay": {
+      "$value": "{z-index.300}",
+      "$description": "Every menu, popover and dialog. They share this one layer, so the one opened last, added to the page last, sits on top of the ones opened before it."
+    },
+    "toast": {
+      "$value": "{z-index.400}",
+      "$description": "A message that must show above everything, an open dialog included, such as a notice that a save went through."
+    }
+  }
+}

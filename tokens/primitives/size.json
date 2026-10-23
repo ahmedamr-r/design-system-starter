@@ -1,8 +1,9 @@
 {
   "size": {
     "$type": "dimension",
-    "$description": "The size scale, in px, for spacing, corners, the focus ring and the offsets, blur and spread of each elevation's shadow. Steps are named by multiples of 4px, so 100 is 4px and 400 is 16px.",
+    "$description": "The size scale, in px, for spacing, corners, line widths, the focus ring and the offsets, blur and spread of each elevation's shadow. Steps are named by multiples of 4px, so 25 is 1px, 100 is 4px and 400 is 16px.",
     "0": { "$value": { "value": 0, "unit": "px" } },
+    "25": { "$value": { "value": 1, "unit": "px" } },
     "50": { "$value": { "value": 2, "unit": "px" } },
     "100": { "$value": { "value": 4, "unit": "px" } },
     "150": { "$value": { "value": 6, "unit": "px" } },

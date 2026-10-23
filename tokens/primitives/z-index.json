@@ -1,0 +1,10 @@
+{
+  "z-index": {
+    "$type": "number",
+    "$description": "Stacking numbers, the values z-index takes, named by the number, so 100 is 100. A higher number paints over a lower one. They leave room between them, so a layer can be added between two others later without renumbering the rest.",
+    "100": { "$value": 100 },
+    "200": { "$value": 200 },
+    "300": { "$value": 300 },
+    "400": { "$value": 400 }
+  }
+}

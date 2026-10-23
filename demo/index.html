@@ -9,6 +9,13 @@
     <script type="module" src="demo.js"></script>
   </head>
   <body>
+    <!-- The page's header, which stays at the top while the page scrolls, on the sticky layer.
+         Its words are the demo's own, like the panel labels, in the page's language. -->
+    <header class="page-header">
+      <h1 class="page-title">Token demo</h1>
+      <p class="page-note">Each panel in English, then in Arabic. This header stays at the top as you scroll.</p>
+    </header>
+
     <!-- The page sets no mode, so it follows the reader's setting. Every panel sets its own.
          demo.js fills this with panels for no brand and for each brand in dist/brands.json,
          which npm run build writes from tokens/brands/, so this page names no brand.

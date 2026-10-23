@@ -1,0 +1,9 @@
+{
+  "border": {
+    "width": {
+      "$type": "dimension",
+      "$description": "How thick a line is: a card's edge, a divider, a notice's edge. Its colour is a color.border semantic, in color.json.",
+      "default": { "$value": "{size.25}", "$description": "The 1px line, for every edge and divider." }
+    }
+  }
+}

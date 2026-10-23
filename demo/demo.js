@@ -22,11 +22,17 @@
 // light and in dark. The names of the states are the demo's own labels, like
 // the panel labels, so they stay in the page's language.
 //
-// Last the elevation panels: 10. the three heights side by side, resting,
+// Then the elevation panels: 10. the three heights side by side, resting,
 // raised and floating, with no brand, in light and in dark, since a brand never
 // changes a shadow. Each tile is named for its height and shows the variable
 // it reads. The names are the demo's own labels too, and the variable is code,
 // so it stays English in every panel.
+//
+// Last the layers panels: 11. five tiles that overlap, a lifted card, a sticky
+// header, a menu, a dialog opened after it and a toast, each on its layer,
+// with no brand, in light and in dark, since no brand or mode changes a layer.
+// Their names are the demo's own labels, and the variable each reads is code,
+// as in the elevation panels.
 //
 // Each of those panels comes once for each language in copy.json: first in the
 // page's own language, the one on <html>, then right after it in each other
@@ -282,6 +288,45 @@ function heightsRow({ language }) {
   return list;
 }
 
+// The five tiles of the layers panels, highest layer first, the order they
+// come in the page. That is the reverse of the order they stack in, so what
+// sits on top comes from the layers alone, with one exception on purpose: the
+// menu and the dialog share the overlay layer, and the dialog comes after the
+// menu, so it sits on top, as the overlay opened last does. tile names the
+// tile for demo.css, and layer is the token it reads, --layer-<layer>. The
+// labels are the demo's own words, in the page's language.
+const layerTiles = [
+  { label: 'Toast, above the dialog', tile: 'toast', layer: 'toast' },
+  { label: 'Menu, an overlay', tile: 'menu', layer: 'overlay' },
+  { label: 'Dialog, an overlay opened after the menu', tile: 'dialog', layer: 'overlay' },
+  { label: 'Sticky header', tile: 'sticky', layer: 'sticky' },
+  { label: 'Lifted card', tile: 'raised', layer: 'raised' },
+];
+
+// The tiles, each with its name and, under it, the variable it reads. Inside a
+// panel in another language the names set the page's lang and dir again, and
+// the variable, as code, sets its own in every panel, as in heightsRow.
+function layersStack({ language }) {
+  const list = document.createElement('ul');
+  list.className = 'layers';
+  for (const { label, tile, layer } of layerTiles) {
+    const item = document.createElement('li');
+    item.className = 'layer';
+    item.dataset.tile = tile;
+    const name = document.createElement('span');
+    name.className = 'layer-name';
+    name.textContent = label;
+    if (inOtherLanguage(language)) setLanguage(name, pageLanguage);
+    const token = document.createElement('code');
+    token.className = 'layer-token';
+    token.textContent = `--layer-${layer}`;
+    setLanguage(token, 'en');
+    item.append(name, token);
+    list.append(item);
+  }
+  return list;
+}
+
 // A link in the colours of the panel it sits in, to compare with the card. Its
 // words are the page's, like a label's.
 function link(text, language) {
@@ -389,6 +434,16 @@ for (const mode of modes) {
   cases.push((language) => panel(
     { label: `Elevation, ${mode}`, mode, language, wide: true },
     heightsRow({ language }),
+  ));
+}
+
+// 11. The layers panels: the five tiles on their layers, with no brand, in
+// light and in dark. The order they stack in is the same in both; the
+// surfaces and shadows that go with each follow the mode.
+for (const mode of modes) {
+  cases.push((language) => panel(
+    { label: `Layers, ${mode}`, mode, language, wide: true },
+    layersStack({ language }),
   ));
 }
 

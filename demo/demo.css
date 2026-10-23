@@ -37,6 +37,42 @@ body {
   letter-spacing: var(--type-body-letter-spacing);
 }
 
+/* The page's header stays at the top while the page scrolls, on the sticky
+   layer, so every panel and card scrolls under it, a lifted card included.
+   It paints its own surface, so nothing shows through it, and sets its text
+   colour with it. Its line along the bottom reads the border width. Its
+   start and end padding is the panels' own, so its words line up with them. */
+.page-header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--layer-sticky);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-gap-small) var(--space-gap-large);
+  padding: var(--space-padding-medium) var(--space-padding-large);
+  background: var(--color-surface-page);
+  color: var(--color-text-default);
+  border-block-end: var(--border-width-default) solid var(--color-border-default);
+}
+
+.page-title {
+  margin: 0;
+  font-size: var(--type-title-size);
+  font-weight: var(--type-title-weight);
+  line-height: var(--type-title-line-height);
+  letter-spacing: var(--type-title-letter-spacing);
+}
+
+.page-note {
+  margin: 0;
+  color: var(--color-text-subtle);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line-height);
+  letter-spacing: var(--type-label-letter-spacing);
+}
+
 .panels {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -80,7 +116,7 @@ body {
   padding: var(--space-padding-large);
   background: var(--color-surface-default);
   color: var(--color-text-default);
-  border: 1px solid var(--color-border-default);
+  border: var(--border-width-default) solid var(--color-border-default);
   border-radius: var(--radius-surface);
   box-shadow: var(--elevation-resting);
   /* A small movement, so it reads base, which reduced motion makes 0ms: for
@@ -91,9 +127,12 @@ body {
 
 /* The card lifts a little under the pointer. The 2px fits no token, since
    no token holds a distance to move, so it stays 2px until the designer
-   picks one. */
+   picks one. Lifted, it reads the raised layer, so its edge and shadow paint
+   over the panels beside it, and still under the page's sticky header. A
+   card is a grid item, so z-index works on it with no position. */
 .card:hover {
   translate: 0 -2px;
+  z-index: var(--layer-raised);
 }
 
 .card-head {
@@ -156,7 +195,7 @@ body {
   gap: var(--space-gap-small);
   margin: var(--space-gap-small) 0 0;
   padding: var(--space-padding-medium) 0 0;
-  border-top: 1px solid var(--color-border-default);
+  border-top: var(--border-width-default) solid var(--color-border-default);
   list-style: none;
   font-size: var(--type-body-size);
   font-weight: var(--type-body-weight);
@@ -231,7 +270,7 @@ body {
 .button:disabled {
   background: var(--color-fill-disabled);
   color: var(--color-text-disabled);
-  box-shadow: inset 0 0 0 1px var(--color-border-disabled);
+  box-shadow: inset 0 0 0 var(--border-width-default) var(--color-border-disabled);
   cursor: not-allowed;
 }
 
@@ -348,7 +387,7 @@ body {
   justify-self: stretch;
   margin: 0;
   padding: var(--space-padding-small) var(--space-padding-medium);
-  border: 1px solid;
+  border: var(--border-width-default) solid;
   border-radius: var(--radius-control);
   font-size: var(--type-body-size);
   font-weight: var(--type-body-weight);
@@ -452,6 +491,106 @@ body {
    own in every panel, set by demo.js, and reads the same label role as the
    name above it. */
 .height-token {
+  color: var(--color-text-subtle);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line-height);
+  letter-spacing: var(--type-label-letter-spacing);
+}
+
+/* The layers panels: five tiles stacked like a staircase, lowest at the top,
+   each one row down and one step in from the last, so it covers the bottom
+   edge of the tile before it. Each reads its layer by name. The page lists
+   them highest first, the toast at the top of the list and the lifted card at
+   the bottom, so without the layers the card would paint over all of them:
+   what is on top here comes from the layers alone. The menu and the dialog
+   share the overlay layer, and the dialog comes after the menu in the page,
+   so it sits on top, as the overlay opened last does. The steps are margins
+   at the start edge, so in Arabic the staircase starts on the right with
+   nothing flipped, and one column keeps it whole at any width.
+   isolation: isolate keeps the tiles' layers inside the picture: without it
+   the toast would paint over the page's sticky header as it scrolls by. */
+.layers {
+  isolation: isolate;
+  display: grid;
+  justify-items: start;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Every tile paints its own surface and text colour, and an edge in the
+   border width, so two tiles on the same surface stay apart where they
+   overlap. Its name and variable sit at its start edge, like the states and
+   the statuses. */
+.layer {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-gap-small);
+  padding: var(--space-padding-medium);
+  border: var(--border-width-default) solid var(--color-border-default);
+  border-radius: var(--radius-surface);
+  color: var(--color-text-default);
+}
+
+/* Lowest first: the row each tile sits in, how far in from the start edge it
+   steps, a large gap per step, its layer, and the surface and height that go
+   with what it stands for. Every tile but the lowest moves up into the one
+   above it by a medium gap, which covers only that tile's bottom padding, so
+   no words are hidden. The rows are set here, not by the page's order, which
+   runs the other way. */
+.layer[data-tile="raised"] {
+  grid-row: 1;
+  z-index: var(--layer-raised);
+  background: var(--color-surface-default);
+  box-shadow: var(--elevation-resting);
+}
+
+.layer[data-tile="sticky"] {
+  grid-row: 2;
+  margin-block-start: calc(-1 * var(--space-gap-medium));
+  margin-inline-start: var(--space-gap-large);
+  z-index: var(--layer-sticky);
+  background: var(--color-surface-page);
+}
+
+.layer[data-tile="menu"] {
+  grid-row: 3;
+  margin-block-start: calc(-1 * var(--space-gap-medium));
+  margin-inline-start: calc(2 * var(--space-gap-large));
+  z-index: var(--layer-overlay);
+  background: var(--color-surface-raised);
+  box-shadow: var(--elevation-raised);
+}
+
+.layer[data-tile="dialog"] {
+  grid-row: 4;
+  margin-block-start: calc(-1 * var(--space-gap-medium));
+  margin-inline-start: calc(3 * var(--space-gap-large));
+  z-index: var(--layer-overlay);
+  background: var(--color-surface-raised);
+  box-shadow: var(--elevation-floating);
+}
+
+.layer[data-tile="toast"] {
+  grid-row: 5;
+  margin-block-start: calc(-1 * var(--space-gap-medium));
+  margin-inline-start: calc(4 * var(--space-gap-large));
+  z-index: var(--layer-toast);
+  background: var(--color-surface-raised);
+  box-shadow: var(--elevation-floating);
+}
+
+.layer-name {
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line-height);
+  letter-spacing: var(--type-label-letter-spacing);
+}
+
+/* The variable the tile reads, as code, like the elevation tiles'. */
+.layer-token {
+  overflow-wrap: anywhere;
   color: var(--color-text-subtle);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
