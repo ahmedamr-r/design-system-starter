@@ -1,7 +1,8 @@
 // Checks the token rules that are easy to break and hard to see.
 // Run it after `npm run build`; it reads the token files, the demo's CSS and
 // HTML, dist/tokens.css, tokens/contrast-pairs.json, and the scripts, workflows,
-// config files and demo files that must not name a brand. It prints one line
+// config files and demo files that must not name a brand, then the demo's
+// script and demo/copy.json for language and direction. It prints one line
 // per check, and exits with an error if any fail.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
@@ -511,6 +512,111 @@ check(
     `${contextName(context)}: ${foreground} on ${background} is ${twoPlaces(reached)}:1, needs ${ratio}:1 (${front} on ${back})`),
   { all: true },
 );
+
+// 15, 16 and 17 are about language and direction. lang and dir always go
+// together, and the direction comes from the language: Intl.Locale knows which
+// way each language reads, so nothing types it. The demo's words live in
+// demo/copy.json, one set per language, and English is the full set.
+const directionOf = (language) => new Intl.Locale(language).getTextInfo().direction;
+const lineAt = (text, index) => text.slice(0, index).split('\n').length;
+
+// 15. Every element in the demo's HTML that has lang or dir has both, and its
+//     dir is the one Intl.Locale gives for its lang. Comments are blanked, as
+//     in check 3, so a tag in a comment does not count.
+const TAG = /<([a-z][\w-]*)((?:\s+[^\s=>/]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)\s*\/?>/gi;
+const ATTRIBUTE = /([^\s=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g;
+const languageProblem = ({ where, lang, dir }) => {
+  if (lang === undefined) {
+    return `${where} has dir="${dir}" and no lang. lang and dir go together, and the direction comes from the language: add the lang its words are in.`;
+  }
+  let expected;
+  try {
+    expected = directionOf(lang);
+  } catch (error) {
+    return `${where} has lang="${lang}", which Intl.Locale does not read as a language code (${error.message}). Use a code such as en or ar.`;
+  }
+  if (dir === undefined) return `${where} has lang="${lang}" and no dir. lang and dir go together: add dir="${expected}", the way ${lang} reads.`;
+  if (dir !== expected) return `${where} has lang="${lang}" with dir="${dir}", but ${lang} reads ${expected}. Set dir="${expected}": the direction comes from the language.`;
+  return undefined;
+};
+check('Every element in the demo\'s HTML with lang or dir has both, and its dir is the way its lang reads', demoFiles
+  .filter(({ file }) => file.endsWith('.html'))
+  .flatMap(({ file, text }) => [...text.matchAll(TAG)].flatMap(({ 1: name, 2: attributeText, index }) => {
+    const attributes = new Map([...attributeText.matchAll(ATTRIBUTE)]
+      .map(([, key, double, single, bare]) => [key.toLowerCase(), double ?? single ?? bare ?? '']));
+    const lang = attributes.get('lang');
+    const dir = attributes.get('dir');
+    if (lang === undefined && dir === undefined) return [];
+    const problem = languageProblem({ where: `${file}:${lineAt(text, index)} <${name.toLowerCase()}>`, lang, dir });
+    return problem ? [problem] : [];
+  })));
+
+// 16. The demo's script never types a direction: no "ltr" or "rtl" as a string,
+//     and a script that sets dir asks Intl.Locale for it. Comments are blanked
+//     and strings kept, so a comment may say rtl but code may not.
+const CODE_PARTS = /('(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"|`(?:\\.|[^`\\])*`)|\/\/[^\n]*|\/\*[\s\S]*?\*\//g;
+const demoScripts = existsSync('demo')
+  ? readdirSync('demo')
+      .filter((file) => /\.(?:js|mjs)$/.test(file))
+      .map((file) => ({
+        file: join('demo', file),
+        text: readFileSync(join('demo', file), 'utf8').replace(CODE_PARTS, (part, string) => string ?? blank(part)),
+      }))
+  : [];
+check('The demo\'s script asks Intl.Locale for each direction and never types one', demoScripts.flatMap(({ file, text }) => {
+  const problems = [...text.matchAll(CODE_PARTS)]
+    .filter(([, string]) => string !== undefined)
+    .flatMap(({ 1: string, index }) => [...string.matchAll(/\b(?:ltr|rtl)\b/gi)]
+      .map(([direction]) => `${file}:${lineAt(text, index)} types the direction "${direction}". Ask Intl.Locale for it from the language instead, as in new Intl.Locale(lang).getTextInfo().direction.`));
+  // With the strings blanked too, so a message that mentions Intl.Locale is
+  // not taken for a call to it.
+  const code = text.replace(CODE_PARTS, (part, string) => (string === undefined ? part : string[0] + blank(string.slice(1, -1)) + string.at(-1)));
+  const setsDir = /\.dir\s*=(?!=)|setAttribute\(\s*(['"`])dir\1/.test(text);
+  if (setsDir && !/\bnew\s+Intl\.Locale\s*\(/.test(code)) {
+    problems.push(`${file} sets dir without asking Intl.Locale. Work the direction out from the language, as in new Intl.Locale(lang).getTextInfo().direction.`);
+  }
+  return problems;
+}));
+
+// 17. Every language in demo/copy.json has every string English has: each
+//     name, with a string that is not empty, and for a list, every item. Keys
+//     that start with $ are notes, not languages or strings.
+const COPY = join('demo', 'copy.json');
+const SOURCE = 'en';
+const copyProblems = [];
+let copyFile;
+if (!existsSync(COPY)) {
+  copyProblems.push(`${COPY} is missing. It holds the card's words, in English and each other language the demo shows.`);
+} else {
+  try {
+    copyFile = JSON.parse(readFileSync(COPY, 'utf8'));
+  } catch (error) {
+    copyProblems.push(`${COPY} is not valid JSON: ${error.message}`);
+  }
+}
+const isWords = (value) => typeof value === 'string' && value.trim() !== '';
+const english = copyFile?.[SOURCE];
+if (copyFile && (typeof english !== 'object' || english === null)) {
+  copyProblems.push(`${COPY} has no "${SOURCE}". English is the full set of strings every other language is measured against.`);
+} else if (copyFile) {
+  for (const [language, strings] of Object.entries(copyFile)) {
+    if (language.startsWith('$') || language === SOURCE) continue;
+    for (const [name, source] of Object.entries(english)) {
+      if (name.startsWith('$')) continue;
+      const translated = strings?.[name];
+      if (!Array.isArray(source)) {
+        if (!isWords(translated)) copyProblems.push(`${COPY}: ${language} has no ${name}. English has "${source}".`);
+      } else if (!Array.isArray(translated)) {
+        copyProblems.push(`${COPY}: ${language} has no ${name}. English has a list of ${source.length}: "${source.join('" / "')}".`);
+      } else {
+        source.forEach((item, i) => {
+          if (!isWords(translated[i])) copyProblems.push(`${COPY}: ${language} is missing item ${i + 1} of ${name}. English has "${item}".`);
+        });
+      }
+    }
+  }
+}
+check(`Every language in ${COPY} has every string English has`, copyProblems, { all: true });
 
 if (failed > 0) {
   console.log(`\n${failed} check${failed === 1 ? '' : 's'} failed.`);

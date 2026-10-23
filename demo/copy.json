@@ -1,0 +1,29 @@
+{
+  "$description": "The words on the demo's card, one set per language, keyed by language code. English is the full set, and npm run check fails a language that is missing a string English has. A list, such as the features, has one string per item. The price is not here yet: it stays typed in the template in index.html.",
+  "en": {
+    "plans.studio.name": "Studio",
+    "plans.studio.tag": "Most popular",
+    "plans.studio.pitch": "For small teams that ship every week.",
+    "card.unit": "per seat, per month",
+    "plans.studio.features": [
+      "Unlimited projects and reviewers",
+      "A shared component library",
+      "Review links with comments"
+    ],
+    "plans.studio.cta": "Start a 14-day trial",
+    "card.compare": "Compare plans"
+  },
+  "ar": {
+    "plans.studio.name": "استوديو",
+    "plans.studio.tag": "الأكثر طلبًا",
+    "plans.studio.pitch": "للفرق الصغيرة التي تطلق جديدًا كل أسبوع.",
+    "card.unit": "لكل مقعد شهريًا",
+    "plans.studio.features": [
+      "مشاريع ومراجعون بلا حدود",
+      "مكتبة مكونات مشتركة",
+      "روابط مراجعة مع تعليقات"
+    ],
+    "plans.studio.cta": "ابدأ تجربة لمدة 14 يومًا",
+    "card.compare": "قارن الخطط"
+  }
+}

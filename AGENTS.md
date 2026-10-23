@@ -15,6 +15,7 @@ This is a design token library. Token files are JSON in the W3C Design Tokens fo
 - `tokens/primitives/`, `tokens/semantics/` and `tokens/components/` are the token layers.
 - `tokens/brands/`, `tokens/modes/` and `tokens/locales/` are the switches. Each holds one file per option that differs from the default, and each file re-points tokens that already exist. The defaults, no brand, light and the default type, are what the tokens already hold, so they have no file. The README in each folder says which attribute picks its files.
 - `tokens/contrast-pairs.json` lists each text and focus colour, the surfaces and fills the demo puts it on, and the contrast ratio it must reach there.
+- `demo/copy.json` holds the words on the demo's card, in English and in each other language the demo shows.
 - `scripts/build.js` writes `dist/tokens.css`, and the list of brands it built: `dist/brands.json` and `dist/brands.d.ts`. `scripts/check.js` checks the rules. A change to how either works is its own job. `scripts/lib/resolve.js` works out the colour a token comes to in `dist/tokens.css`, for any script that needs it.
 
 ## What each layer may point at
@@ -79,6 +80,16 @@ A conversation first. Code owner review, below, holds a client to all but the la
 
 `.github/CODEOWNERS` is what enforces this in each client's copy. It makes @ahmedamr-r the owner of every file but the brand files, the `.json` files in `tokens/brands/` whose names do not start with an underscore, so a pull request that changes a rule, a check, the template or a shared token waits for that review, and one that changes only brand files does not. It blocks a merge only once the ruleset on main turns on Require review from Code Owners, and only while @ahmedamr-r has write access to the copy. Renaming a brand file changes only brand files, so a new name is the one request above that passes without review: that stays by hand.
 
+## Language and direction
+
+Each rule ends with the check that enforces it, or with "by hand".
+
+- `lang` and `dir` always go together. An element that sets one sets the other, starting with `<html lang="en" dir="ltr">`. Check 15 for the demo's HTML. In the demo's script both are set by one function, `setLanguage`, and that nothing sets one alone is by hand.
+- The direction comes from the language, never typed. In HTML, `dir` is the direction `Intl.Locale` gives for the `lang` beside it, check 15. A script asks for it, `new Intl.Locale(lang).getTextInfo().direction`, and never writes `"ltr"` or `"rtl"`, check 16.
+- Words that stay in another language keep their own `lang` and `dir`. The panel labels and the comparison links are English, so inside an Arabic panel each sets `lang="en" dir="ltr"`. By hand.
+- The card's words are in `demo/copy.json`, one set per language, keyed by language code, and English is the full set. Every other language has every string English has, check 17. The price is not in it yet, and stays typed in the template. That a translation is right is by hand.
+- The CSS does not name a side. Flex, grid and properties such as `padding-inline-start` follow `dir`, so one stylesheet works both ways, and no token needs a left and a right version. By hand.
+
 ## What `npm run check` enforces
 
 Each check fails with a plain message that names the file. They are numbered as in `scripts/check.js`.
@@ -97,5 +108,8 @@ Each check fails with a plain message that names the file. They are numbered as 
 12. The CSS and HTML in `demo/` read only variables that `dist/tokens.css` writes. The message suggests the closest name the demo may read.
 13. Every text and focus colour has a pair in `tokens/contrast-pairs.json`. They are each `color.text` semantic, `color.border.focus`, and any component token that points at one, such as `button.label`, whose pair also counts for the semantic it points at. Every token the file names exists.
 14. Every pair in `tokens/contrast-pairs.json` reaches its ratio, for every brand and for no brand, in light and in dark. Both colours are worked out from `dist/tokens.css` the way a browser would, and measured with the WCAG formula on their hex values. Every pair that falls short prints on its own line, with its brand and mode. A brand file that sets nothing is not measured, and the check's title names it.
+15. Every element in the HTML in `demo/` that has `lang` or `dir` has both, its `lang` is a code `Intl.Locale` can read, and its `dir` is the direction `Intl.Locale` gives for that language. Comments do not count.
+16. No script in `demo/` types a direction: `ltr` or `rtl` in a string fails, in any letter case, and a script that sets `dir` must call `new Intl.Locale`. Comments do not count.
+17. Every language in `demo/copy.json` has every string English has, not empty, and every item of each list. Each missing string prints on its own line, with the English beside it.
 
-Nothing checks the rest, so keep it by hand: that `tokens/contrast-pairs.json` lists every surface or fill the demo puts each colour on, that primitives are named for what they are, that a component file exists only when a brand restyles that component and a semantic would not do, that pages use no raw sizes or fonts (check 1 catches only colours), that anything that paints a surface or a fill sets its text colour and an element with a `data-mode` paints its own surface, that a new brand starts as a copy of the template, that a brand points the button's radius at a radius, that brand names stay out of any other list, config or code, and that a client renames their brand only after a conversation. Code owner review, not this check, holds a client to the rest of what they may not change on their own.
+Nothing checks the rest, so keep it by hand: that `tokens/contrast-pairs.json` lists every surface or fill the demo puts each colour on, that primitives are named for what they are, that a component file exists only when a brand restyles that component and a semantic would not do, that pages use no raw sizes or fonts (check 1 catches only colours), that anything that paints a surface or a fill sets its text colour and an element with a `data-mode` paints its own surface, that a new brand starts as a copy of the template, that a brand points the button's radius at a radius, that brand names stay out of any other list, config or code, that a client renames their brand only after a conversation, that the demo's script never sets `lang` without `dir`, that words in another language keep their own `lang` and `dir`, that a translation says what the English says, and that the CSS names no side. Code owner review, not this check, holds a client to the rest of what they may not change on their own.
