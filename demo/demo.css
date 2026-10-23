@@ -7,7 +7,7 @@ body {
   font-family: var(--type-family);
   font-size: var(--type-body-size);
   font-weight: var(--type-body-weight);
-  line-height: 1.5;
+  line-height: var(--type-body-line-height);
 }
 
 .panels {
@@ -139,7 +139,7 @@ body {
   font: inherit;
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
-  line-height: 1.5;
+  line-height: var(--type-body-line-height);
   cursor: pointer;
 }
 

@@ -18,6 +18,11 @@
       "regular": { "$value": 400 },
       "medium": { "$value": 500 },
       "semibold": { "$value": 600 }
+    },
+    "line-height": {
+      "$type": "number",
+      "$description": "Line heights as plain numbers, multiples of the font size, so each follows whatever size it is used with. Steps are named by the number times 100, so 150 is 1.5.",
+      "150": { "$value": 1.5 }
     }
   }
 }

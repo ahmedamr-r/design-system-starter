@@ -7,7 +7,8 @@
     },
     "body": {
       "size": { "$type": "dimension", "$value": "{font.size.300}", "$description": "Paragraphs and most text." },
-      "weight": { "$type": "fontWeight", "$value": "{font.weight.regular}" }
+      "weight": { "$type": "fontWeight", "$value": "{font.weight.regular}" },
+      "line-height": { "$type": "number", "$value": "{font.line-height.150}", "$description": "Text that may run onto a second line: paragraphs, lists and buttons. A single line set tight, such as a tag or a price, uses 1 and reads no token." }
     },
     "label": {
       "size": { "$type": "dimension", "$value": "{font.size.200}", "$description": "Buttons, tags and small labels." },

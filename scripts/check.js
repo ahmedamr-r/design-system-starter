@@ -4,8 +4,9 @@
 // config files and demo files that must not name a brand, then the demo's
 // script and demo/copy.json for language and direction, and last every CSS
 // file and the CSS in every HTML file outside node_modules and the build
-// folders, and each token's $description, for anything that names a side. It
-// prints one line per check, and exits with an error if any fail.
+// folders, and each token's $description, for anything that names a side, and
+// that same CSS again for line heights that read no token. It prints one line
+// per check, and exits with an error if any fail.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { resolver } from './lib/resolve.js';
@@ -657,8 +658,10 @@ const cssSources = walk('.')
     return { file, text: css.replace(/\/\*[\s\S]*?\*\//g, blank) };
   });
 
-// Every declaration, as { file, line, property, value }, with !important
-// dropped, and every selector or at-rule prelude, as { file, line, prelude }.
+// Every declaration, as { file, line, property, value, rule }, with
+// !important dropped, and every selector or at-rule prelude, as
+// { file, line, prelude }. rule tells apart the rule bodies, so check 20 can
+// see what else the same rule sets.
 const declarations = [];
 const preludes = [];
 for (const { file, text } of cssSources) {
@@ -675,6 +678,7 @@ for (const { file, text } of cssSources) {
           line: lineAt(text, at + match[1].length),
           property: match[2].toLowerCase(),
           value: match[3].replace(/!\s*important/i, '').trim().replace(/\s+/g, ' '),
+          rule: `${file}@${index}`,
         });
       }
       at += part.length + 1;
@@ -809,6 +813,57 @@ check('No token\'s $description uses left or right for a side', descriptions.fla
   const where = at === -1 ? file : `${file}:${lineAt(text, at)}`;
   return [`${where} ${path || 'the file'}'s $description says "${phrase}". Say start and end, the sides a line of text begins and ends on, since in Arabic the start is on the right.`];
 }), { all: true });
+
+// 20. Every line height in the CSS reads a token, so a locale or a brand can
+//     re-point it. The one raw value is 1, for a single line set tight, such as
+//     a tag or a price. It reads the same CSS as check 18. A line-height token
+//     is a semantic or component token whose name ends in line-height, such as
+//     type.body.line-height; a primitive does not count, as everywhere else on
+//     a page. The font shorthand sets a line height too: after a slash, as in
+//     font: 16px/1.5 sans-serif, and without one it sets it back to normal,
+//     unless a line-height later in the same rule sets it again. inherit and
+//     unset set nothing of their own, so they pass.
+const lineHeightTokens = [...layeredNames].filter((path) => path.split('.').at(-1) === 'line-height').map(cssName);
+const lineHeightList = lineHeightTokens.length > 0 ? lineHeightTokens.map((name) => `var(${name})`).join(', ') : 'none yet: add one under type in tokens/semantics/';
+const TIGHT = /^1(?:\.0+)?$/;
+const KEEPS = new Set(['inherit', 'unset']);
+// What the font shorthand puts after its first slash outside brackets, up to
+// the next space, or undefined when it has no slash.
+const lineHeightInFont = (value) => {
+  let depth = 0;
+  for (let i = 0; i < value.length; i++) {
+    if (value[i] === '(') depth += 1;
+    if (value[i] === ')') depth -= 1;
+    if (value[i] === '/' && depth === 0) return partsOf(value.slice(i + 1))[0] ?? '';
+  }
+  return undefined;
+};
+const lineHeightProblem = (where, setting, value) => {
+  const lowered = value.toLowerCase();
+  if (TIGHT.test(lowered) || KEEPS.has(lowered)) return [];
+  const [, read, fallback] = value.match(/^var\(\s*(--[\w-]+)\s*(?:,\s*(.*?))?\s*\)$/) ?? [];
+  if (read && fallback !== undefined) {
+    return [`${where} ${setting} with ${read} and a fallback of ${fallback}. Drop the fallback, so the line height always comes from the token.`];
+  }
+  if (read && lineHeightTokens.includes(read)) return [];
+  if (read && primitiveCss.has(read)) {
+    return [`${where} ${setting} with ${read}, a primitive. Read the semantic for that job: ${lineHeightList}.`];
+  }
+  if (read) {
+    return [`${where} ${setting} with ${read}, which is not a line-height semantic. Read one that is: ${lineHeightList}.`];
+  }
+  return [`${where} ${setting} to ${value} without reading a token. Read ${lineHeightList}, or use 1 for a single line set tight, such as a tag or a price.`];
+};
+check('Every line height in the CSS reads a token, or is 1', declarations.flatMap((declaration, at) => {
+  const { file, line, property, value, rule } = declaration;
+  const where = `${file}:${line}`;
+  if (property === 'line-height') return lineHeightProblem(where, 'sets line-height', value);
+  if (property !== 'font' || KEEPS.has(value.toLowerCase())) return [];
+  const inFont = lineHeightInFont(value);
+  if (inFont !== undefined) return lineHeightProblem(where, `sets the line height in font: ${value}`, inFont);
+  const setAgain = declarations.slice(at + 1).some((later) => later.rule === rule && later.property === 'line-height');
+  return setAgain ? [] : [`${where} sets font: ${value}, which sets the line height back to normal. Add a line-height after it that reads ${lineHeightList}, or set font-size and font-family on their own.`];
+}).sort((a, b) => a.localeCompare(b, 'en', { numeric: true })), { all: true });
 
 if (failed > 0) {
   console.log(`\n${failed} check${failed === 1 ? '' : 's'} failed.`);
