@@ -1,11 +1,12 @@
 {
   "space": {
     "$type": "dimension",
-    "$description": "Spacing does two jobs, so it has two kinds, each in small, medium and large. Padding is room inside something, between its edge and what it holds. Gap is room between things, read by gap and by margin. Padding never reads a gap, and a gap or a margin never reads a padding.",
+    "$description": "Spacing does two jobs, so it has two kinds: padding in xsmall, small, medium and large, and gap in small, medium and large. Padding is room inside something, between its edge and what it holds. Gap is room between things, read by gap and by margin. Padding never reads a gap, and a gap or a margin never reads a padding.",
     "padding": {
       "$description": "Room inside something, between its edge and what it holds.",
+      "xsmall": { "$value": "{size.100}", "$description": "Inside the smallest things: all round the tick on its disc." },
       "small": { "$value": "{size.200}", "$description": "Inside small things: all round a tag, and the top and bottom of buttons, badges and notices." },
-      "medium": { "$value": "{size.400}", "$description": "Inside buttons and notices at the start and end, the sides their text begins and ends on, and above a list under a rule." },
+      "medium": { "$value": "{size.400}", "$description": "Inside buttons, badges and notices at the start and end, the sides their text begins and ends on, and above a list under a rule." },
       "large": { "$value": "{size.600}", "$description": "Inside cards and panels." }
     },
     "gap": {

@@ -5,7 +5,9 @@
 // script and demo/copy.json for language and direction, and last every CSS
 // file and the CSS in every HTML file outside node_modules and the build
 // folders, and each token's $description, for anything that names a side, and
-// that same CSS again for line heights that read no token, then the files in
+// that same CSS again for a value of its own where a token covers the
+// property, type, spacing, radii, border widths, shadows, z-index and
+// transitions, unless its line says own: and why, then the files in
 // tokens/locales/, that same CSS once more for italics and capitals, and last
 // the icon names in the HTML, the demo's script, the CSS and the .svg files,
 // for any named left or right, and last demo/copy.json for digits and the
@@ -17,8 +19,7 @@
 // role and a gap or a margin a gap role, then that every switch file sets
 // only what tokens/switch-scopes.json lets its switch change, and last of all
 // that every transition that moves something reads motion.duration.base or
-// motion.duration.slow, which reduced motion points at 0ms, and after it that
-// every z-index reads a layer from tokens/semantics/layer.json. Check 6 reads
+// motion.duration.slow, which reduced motion points at 0ms. Check 6 reads
 // that list too, for where each token is declared, and reads the rules inside
 // a media query in dist/tokens.css as sitting in it. Check 12, that the
 // CSS reads only variables
@@ -601,12 +602,13 @@ check('tokens/modes holds no mode other than dark', jsonFiles(join('tokens', 'mo
   .map((file) => `${file} is a mode other than dark. light-dark() has only a light answer and a dark one, and light is what the semantics already hold.`));
 
 // Every CSS file in the repository, and the CSS inside each HTML file: its
-// <style> blocks and style attributes. Checks 12, 18, 20, 22, 23 and 26 read
+// <style> blocks and style attributes. Checks 12, 18, 20, 22, 23, 26, 29 and 31 read
 // it. node_modules is left out wherever it sits, and so are .git and the build
 // folders, dist/ and .vite-build/, since they are written from what is checked
 // here. In HTML everything but the CSS is blanked, and a style attribute's
 // quotes become braces, so the text keeps its length, every line number stays
-// right, and an attribute reads as one rule body. Comments are blanked too.
+// right, and an attribute reads as one rule body. Comments are blanked too,
+// and kept as they were in raw, for check 20, which reads the own: comments.
 const SKIPPED = new Set(['node_modules', '.git', 'dist', '.vite-build']);
 const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
   const path = dir === '.' ? entry.name : join(dir, entry.name);
@@ -630,7 +632,7 @@ const cssSources = walk('.')
   .map((file) => {
     const raw = readFileSync(file, 'utf8');
     const css = /\.css$/i.test(file) ? raw : cssOfHtml(raw);
-    return { file, text: css.replace(/\/\*[\s\S]*?\*\//g, blank) };
+    return { file, raw: css, text: css.replace(/\/\*[\s\S]*?\*\//g, blank) };
   });
 const lineAt = (text, index) => text.slice(0, index).split('\n').length;
 
@@ -911,11 +913,13 @@ check(`Every language in ${COPY} has every string English has`, copyProblems, { 
 // They read cssSources, every CSS file and the CSS in every HTML file, read
 // before check 12, which reads it too.
 
-// Every declaration, as { file, line, property, value, rule }, with
+// Every declaration, as { file, line, lastLine, property, value, rule }, with
 // !important dropped, and every selector or at-rule prelude, as
-// { file, line, prelude, rule }. rule tells apart the rule bodies, so check 20
-// can see what else the same rule sets, and check 18 which declarations sit
-// under a selector: it is the file and where the rule's { is.
+// { file, line, prelude, rule }. lastLine is the line the value ends on, so a
+// value written over several lines has every one of them. rule tells apart
+// the rule bodies, so check 20 can see what else the same rule sets, and
+// check 18 which declarations sit under a selector: it is the file and where
+// the rule's { is.
 const declarations = [];
 const preludes = [];
 for (const { file, text } of cssSources) {
@@ -932,6 +936,7 @@ for (const { file, text } of cssSources) {
         declarations.push({
           file,
           line: lineAt(text, at + match[1].length),
+          lastLine: lineAt(text, at + part.trimEnd().length),
           property: match[2].toLowerCase(),
           value: match[3].replace(/!\s*important/i, '').trim().replace(/\s+/g, ' '),
           rule: `${file}@${index}`,
@@ -1111,19 +1116,64 @@ check('No token\'s $description uses left or right for a side', descriptions.fla
   return [`${where} ${path || 'the file'}'s $description says "${phrase}". Say start and end, the sides a line of text begins and ends on, since in Arabic the start is on the right.`];
 }), { all: true });
 
-// 20. Every line height in the CSS reads a token, so a locale or a brand can
-//     re-point it. The one raw value is 1, for a single line set tight, such as
-//     a tag or a badge. It reads the same CSS as check 18. A line-height token
-//     is a semantic or component token whose name ends in line-height, such as
-//     type.body.line-height; a primitive does not count, as everywhere else on
-//     a page. The font shorthand sets a line height too: after a slash, as in
-//     font: 16px/1.5 sans-serif, and without one it sets it back to normal,
-//     unless a line-height later in the same rule sets it again. inherit and
-//     unset set nothing of their own, so they pass.
+// 20. No CSS sets a property the tokens cover with a value of its own. The
+//     properties are the type ones, font-size, font-weight, font-family,
+//     line-height, letter-spacing and the font shorthand; padding, margin and
+//     gap, as check 29 counts them; every border radius; border widths, in
+//     border-width, the border shorthands and each of their sides; box-shadow
+//     and text-shadow; z-index; and transition, transition-duration and
+//     transition-timing-function. It reads the same CSS as check 18.
+//
+//     A value of its own is a number other than 0, with a unit or without,
+//     such as 12px, 1, 600, 50% or 200ms, a curve, such as cubic-bezier() or
+//     steps(), or a word that names a value: a font's name, bold, small,
+//     normal, thin, medium or thick in a border, or ease-in. 0, none, auto and
+//     inherit pass, and so do initial, unset, revert and revert-layer, which
+//     set no value either. A var() passes, and so does a plain number that
+//     multiplies or divides one inside calc(), as in
+//     calc(-1 * var(--space-gap-medium)): that is a token taken a number of
+//     times, not a size of its own. A var()'s fallback is read as part of the
+//     value. Colours are check 1's, so a colour in a shadow is left to it.
+//
+//     A value that is one component's own business may stay when a comment on
+//     its line starts with own: and says why, as in
+//     line-height: 1; /* own: one line set tight */. Its line is any line the
+//     declaration is written on, and an own: with nothing after it fails.
+//
+//     Two of these properties are held to the right kind of token as well, own:
+//     or not, as the line height check and the z-index check that this one took
+//     in held them: a line-height reads a semantic or component token whose
+//     name ends in line-height, and a z-index a layer in
+//     tokens/semantics/layer.json, or a token that points at one, as it is,
+//     never a number worked out from one. A font shorthand with no slash sets
+//     the line height back to normal, so a line-height must follow it in the
+//     same rule. It also fails when tokens/semantics/layer.json has no layers.
 const lineHeightTokens = [...layeredNames].filter((path) => path.split('.').at(-1) === 'line-height').map(cssName);
 const lineHeightList = lineHeightTokens.length > 0 ? lineHeightTokens.map((name) => `var(${name})`).join(', ') : 'none yet: add one under type in tokens/semantics/';
-const TIGHT = /^1(?:\.0+)?$/;
-const KEEPS = new Set(['inherit', 'unset']);
+// What each semantic and component token points at, by CSS name. Check 29
+// reads it too.
+const pointsAt = new Map([...semantics, ...components].map(({ path, value }) => [cssName(path), referenceIn(value)]));
+const LAYER = /^layer\.[^.]+$/;
+const layerTokens = [...semanticNames].filter((path) => LAYER.test(path));
+const layerList = layerTokens.length > 0
+  ? layerTokens.map((path) => `var(${cssName(path)})`).join(', ')
+  : 'none yet: add them to tokens/semantics/layer.json';
+// The layer a variable reaches, as a token path, or undefined: a layer itself,
+// or a semantic or component token that points at one, followed down.
+const layerOf = (name) => {
+  let path = pathOfCss.get(name);
+  const seen = new Set();
+  while (path && !seen.has(path)) {
+    if (LAYER.test(path) && semanticNames.has(path)) return path;
+    seen.add(path);
+    path = pointsAt.get(cssName(path));
+  }
+  return undefined;
+};
+const SAME_LAYER = 'To put one thing over another in the same layer, put it after the other in the page. A level no layer has is a new layer in tokens/semantics/layer.json, so ask for one rather than typing a number. To start a stacking order of its own without lifting anything, use isolation: isolate.';
+const EASING_WORDS = new Set(['ease', 'ease-in', 'ease-out', 'ease-in-out', 'linear', 'step-start', 'step-end']);
+// Every variable a piece of CSS reads, by name. Check 31 reads it too.
+const readsIn = (text) => [...text.matchAll(/var\(\s*(--[\w-]+)/g)].map(([, name]) => name);
 // What the font shorthand puts after its first slash outside brackets, up to
 // the next space, or undefined when it has no slash.
 const lineHeightInFont = (value) => {
@@ -1135,32 +1185,244 @@ const lineHeightInFont = (value) => {
   }
   return undefined;
 };
-const lineHeightProblem = (where, setting, value) => {
-  const lowered = value.toLowerCase();
-  if (TIGHT.test(lowered) || KEEPS.has(lowered)) return [];
-  const [, read, fallback] = value.match(/^var\(\s*(--[\w-]+)\s*(?:,\s*(.*?))?\s*\)$/) ?? [];
-  if (read && fallback !== undefined) {
-    return [`${where} ${setting} with ${read} and a fallback of ${fallback}. Drop the fallback, so the line height always comes from the token.`];
-  }
-  if (read && lineHeightTokens.includes(read)) return [];
-  if (read && primitiveCss.has(read)) {
-    return [`${where} ${setting} with ${read}, a primitive. Read the semantic for that job: ${lineHeightList}.`];
-  }
-  if (read) {
-    return [`${where} ${setting} with ${read}, which is not a line-height semantic. Read one that is: ${lineHeightList}.`];
-  }
-  return [`${where} ${setting} to ${value} without reading a token. Read ${lineHeightList}, or use 1 for a single line set tight, such as a tag or a badge.`];
+
+// The tokens a covered property reads, as var() names, for the message.
+const tokensWhere = (test) => [...layeredNames].filter(test).map((path) => `var(${cssName(path)})`);
+const readThese = (test, none) => {
+  const found = tokensWhere(test);
+  return found.length > 0 ? `Read a token instead: ${found.join(', ')}.` : `There is no token for it yet: ${none}`;
 };
-check('Every line height in the CSS reads a token, or is 1', declarations.flatMap((declaration, at) => {
+const ANY_WORD = 'any';
+const ROLE_PARTS_ON_THEIR_OWN = 'Set font-size, font-weight, line-height, letter-spacing and font-family on their own, each reading the same role\'s token, such as var(--type-body-size).';
+// Each property the tokens cover: what it is called in a message, which
+// words name a value of its own, and what it reads instead.
+const COVERED = [
+  {
+    kind: 'font size',
+    property: /^font-size$/,
+    words: new Set(['xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large', 'xxx-large', 'smaller', 'larger', 'math']),
+    instead: () => readThese((path) => /^type\.[^.]+\.size$/.test(path), 'add one under type in tokens/semantics/.'),
+  },
+  {
+    kind: 'font weight',
+    property: /^font-weight$/,
+    words: new Set(['normal', 'bold', 'bolder', 'lighter']),
+    instead: () => readThese((path) => /^type\.[^.]+\.weight$/.test(path), 'add one under type in tokens/semantics/.'),
+  },
+  {
+    kind: 'font family',
+    property: /^font-family$/,
+    words: ANY_WORD,
+    instead: () => readThese((path) => path === 'type.family', 'add type.family in tokens/semantics/.'),
+  },
+  {
+    kind: 'line height',
+    property: /^line-height$/,
+    words: new Set(['normal']),
+    instead: () => `Read a token instead: ${lineHeightList}.`,
+  },
+  {
+    kind: 'letter spacing',
+    property: /^letter-spacing$/,
+    words: new Set(['normal']),
+    instead: () => readThese((path) => path.split('.').at(-1) === 'letter-spacing', 'add one under type in tokens/semantics/.'),
+  },
+  {
+    kind: 'font',
+    property: /^font$/,
+    words: ANY_WORD,
+    instead: () => ROLE_PARTS_ON_THEIR_OWN,
+  },
+  {
+    kind: 'padding',
+    property: /^(?:scroll-)?padding(?:-[\w-]+)?$/,
+    words: new Set(),
+    instead: () => readThese((path) => path.startsWith('space.padding.'), 'add a size to space.padding in tokens/semantics/space.json, after asking.'),
+  },
+  {
+    kind: 'margin',
+    property: /^(?:scroll-)?margin(?:-[\w-]+)?$/,
+    words: new Set(),
+    instead: () => readThese((path) => path.startsWith('space.gap.'), 'add a size to space.gap in tokens/semantics/space.json, after asking.'),
+  },
+  {
+    kind: 'gap',
+    property: /^(?:grid-)?(?:row-|column-)?gap$/,
+    words: new Set(),
+    instead: () => readThese((path) => path.startsWith('space.gap.'), 'add a size to space.gap in tokens/semantics/space.json, after asking.'),
+  },
+  {
+    kind: 'radius',
+    property: /^border-(?:(?:top|bottom|start|end)-(?:left|right|start|end)-)?radius$/,
+    words: new Set(),
+    instead: () => readThese((path) => path.startsWith('radius.') || path.split('.').at(-1) === 'radius', 'add one to tokens/semantics/shape.json.'),
+  },
+  {
+    kind: 'border width',
+    property: /^border(?:-(?:top|right|bottom|left|block|inline)(?:-(?:start|end))?)?(?:-width)?$/,
+    words: new Set(['thin', 'medium', 'thick']),
+    instead: () => readThese((path) => path.startsWith('border.width.'), 'add one to tokens/semantics/border.json.'),
+  },
+  {
+    kind: 'shadow',
+    property: /^(?:box|text)-shadow$/,
+    words: new Set(),
+    instead: () => readThese((path) => /^elevation\.[^.]+$/.test(path), 'add a height to tokens/semantics/elevation.json.'),
+  },
+  {
+    kind: 'z-index',
+    property: /^z-index$/,
+    words: new Set(),
+    instead: () => `Read a layer instead: ${layerList}. ${SAME_LAYER}`,
+  },
+  {
+    kind: 'transition',
+    property: /^transition(?:-duration|-timing-function)?$/,
+    words: EASING_WORDS,
+    instead: () => readThese((path) => /^motion\.(?:duration|easing)\.[^.]+$/.test(path), 'add one to tokens/semantics/motion.json.'),
+  },
+];
+const coverOf = (property) => COVERED.find((each) => each.property.test(property));
+
+// Words that set no value of their own, anywhere.
+const SETS_NONE = new Set(['none', 'auto', 'inherit', 'initial', 'unset', 'revert', 'revert-layer']);
+const TOKEN_MARK = '§';
+// A value with each var() taken out and a mark left where it was, or its
+// fallback, when it has one, since the fallback is a value too.
+const withoutVars = (value) => {
+  let out = '';
+  let i = 0;
+  while (i < value.length) {
+    const open = /^var\(\s*--[\w-]+\s*/i.exec(value.slice(i));
+    if (open && (i === 0 || !/[\w-]/.test(value[i - 1]))) {
+      let depth = 1;
+      let at = i + open[0].length;
+      const start = at;
+      while (at < value.length && depth > 0) {
+        if (value[at] === '(') depth += 1;
+        if (value[at] === ')') depth -= 1;
+        at += 1;
+      }
+      const rest = value.slice(start, depth === 0 ? at - 1 : at).trim();
+      out += rest.startsWith(',') ? ` ${withoutVars(rest.slice(1).trim())} ` : ` ${TOKEN_MARK} `;
+      i = at;
+    } else {
+      out += value[i];
+      i += 1;
+    }
+  }
+  return out;
+};
+// A function call, from its name to its own closing bracket, as text.
+const callsIn = (text, names) => {
+  const calls = [];
+  for (const { 0: open, index } of text.matchAll(new RegExp(String.raw`(?<![\w-])(?:${names})\(`, 'gi'))) {
+    let depth = 1;
+    let at = index + open.length;
+    while (at < text.length && depth > 0) {
+      if (text[at] === '(') depth += 1;
+      if (text[at] === ')') depth -= 1;
+      at += 1;
+    }
+    calls.push({ index, end: at, text: text.slice(index, at) });
+  }
+  return calls.filter((call, i) => !calls.slice(0, i).some((outer) => call.index < outer.end));
+};
+const cutOut = (text, calls) => calls.reduceRight((rest, { index, end }) => `${rest.slice(0, index)} ${rest.slice(end)}`, text);
+const COLOUR_CALLS = 'rgba?|hsla?|hwb|oklch|oklab|lab|lch|color|color-mix|light-dark';
+const CURVE_CALLS = 'cubic-bezier|steps|linear';
+const NUMBER = /(?<![\w#.-])[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?(%|[a-z]+)?(?![\w.])/gi;
+// The next character that is not a space, before or after a place in a text,
+// and how many brackets are open there.
+const before = (text, at) => text.slice(0, at).trimEnd().at(-1);
+const after = (text, at) => text.slice(at).trimStart()[0];
+const depthAt = (text, at) => [...text.slice(0, at)].reduce((depth, char) => depth + (char === '(') - (char === ')'), 0);
+// What a value sets of its own, as the pieces of it to name in the message.
+const ownValuesIn = (value, cover) => {
+  const found = [];
+  let text = withoutVars(value);
+  text = cutOut(text, callsIn(text, COLOUR_CALLS)).replace(/#[0-9a-f]{3,8}\b/gi, ' ');
+  const curves = callsIn(text, CURVE_CALLS);
+  found.push(...curves.map(({ text: call }) => call.replace(/\s+/g, ' ')));
+  text = cutOut(text, curves);
+  const readsToken = text.includes(TOKEN_MARK);
+  for (const { 0: number, 1: unit, index } of text.matchAll(NUMBER)) {
+    if (Number.parseFloat(number) === 0) continue;
+    const times = !unit && readsToken && depthAt(text, index) > 0
+      && (['*', '/'].includes(before(text, index)) || after(text, index + number.length) === '*');
+    if (!times) found.push(number);
+  }
+  const words = text.replace(NUMBER, ' ').replace(/(?<![\w-])[\w-]+\(/g, ' ');
+  for (const { 0: word } of words.matchAll(/(["'])(?:\\.|(?!\1).)*\1|(?<![\w-])-?[a-z_][\w-]*/gi)) {
+    const lower = word.toLowerCase();
+    if (SETS_NONE.has(lower)) continue;
+    if (cover.words === ANY_WORD || cover.words.has(lower)) found.push(word);
+  }
+  return found;
+};
+
+// The own: notes in each file, by the line each comment starts on, with what
+// it says after own:.
+const ownNotes = new Map(cssSources.map(({ file, raw }) => [file, new Map(
+  [...raw.matchAll(/\/\*([\s\S]*?)\*\//g)]
+    .filter(({ 1: body }) => /^\s*own:/.test(body))
+    .map(({ 1: body, index }) => [lineAt(raw, index), body.replace(/^\s*own:/, '').trim().replace(/\s+/g, ' ')]),
+)]));
+const ownNoteOf = ({ file, line, lastLine }) => {
+  const notes = ownNotes.get(file);
+  for (let at = line; at <= lastLine; at++) if (notes?.has(at)) return notes.get(at);
+  return undefined;
+};
+const OWN = 'If the value is this component\'s own business, keep it and end its line with a comment that starts with own: and says why.';
+
+// A line-height, or the line height in a font shorthand, reads a line-height
+// token, and a z-index a layer, as it is. Each var() read counts.
+const wrongReads = (where, setting, value, kind) => readsIn(value).flatMap((read) => {
+  if (kind === 'line height') {
+    if (lineHeightTokens.includes(read)) return [];
+    const what = primitiveCss.has(read) ? 'a primitive' : 'which is not a line-height semantic';
+    return [`${where} ${setting} with ${read}, ${what}. Read the semantic for that job: ${lineHeightList}.`];
+  }
+  if (layerOf(read)) return [];
+  const what = primitiveCss.has(read) ? 'a primitive' : 'which is not a layer';
+  return [`${where} sets z-index: ${value} with ${read}, ${what}. Read a layer instead: ${layerList}.`];
+});
+
+const ownValueProblems = declarations.flatMap((declaration, at) => {
   const { file, line, property, value, rule } = declaration;
+  const cover = coverOf(property);
+  if (!cover) return [];
   const where = `${file}:${line}`;
-  if (property === 'line-height') return lineHeightProblem(where, 'sets line-height', value);
-  if (property !== 'font' || KEEPS.has(value.toLowerCase())) return [];
-  const inFont = lineHeightInFont(value);
-  if (inFont !== undefined) return lineHeightProblem(where, `sets the line height in font: ${value}`, inFont);
-  const setAgain = declarations.slice(at + 1).some((later) => later.rule === rule && later.property === 'line-height');
-  return setAgain ? [] : [`${where} sets font: ${value}, which sets the line height back to normal. Add a line-height after it that reads ${lineHeightList}, or set font-size and font-family on their own.`];
-}).sort((a, b) => a.localeCompare(b, 'en', { numeric: true })), { all: true });
+  const note = ownNoteOf(declaration);
+  const problems = [];
+  if (note === '') {
+    problems.push(`${where} says own: and nothing after it. Say why ${property}: ${value} is this component's own business, in the same comment.`);
+  }
+  const found = ownValuesIn(value, cover);
+  if (property === 'font' && !SETS_NONE.has(value.toLowerCase()) && lineHeightInFont(value) === undefined
+    && !declarations.slice(at + 1).some((later) => later.rule === rule && later.property === 'line-height')) {
+    found.push('the line height normal, which a font shorthand with no slash sets');
+  }
+  if (property === 'z-index' && found.length === 0 && readsIn(value).some(layerOf) && !new RegExp(`^${VAR}$`).test(value)) {
+    found.push('a number worked out from a layer');
+  }
+  if (found.length > 0 && note === undefined) {
+    problems.push(`${where} sets ${property}: ${value}. Its own ${cover.kind} ${found.length === 1 ? 'value' : 'values'}: ${found.join(', ')}. ${cover.instead()} ${OWN}`);
+  }
+  if (property === 'line-height') problems.push(...wrongReads(where, 'sets line-height', value, 'line height'));
+  if (property === 'font' && lineHeightInFont(value) !== undefined) {
+    problems.push(...wrongReads(where, `sets the line height in font: ${value}`, lineHeightInFont(value), 'line height'));
+  }
+  if (property === 'z-index') problems.push(...wrongReads(where, 'sets z-index', value, 'z-index'));
+  return problems;
+});
+const missingLayers = layerTokens.length === 0
+  ? ['tokens/semantics/layer.json has no layers. Every z-index reads one, such as layer.overlay.']
+  : [];
+check('Type, spacing, radii, border widths, shadows, z-index and transitions read tokens, or their line says own: and why', [
+  ...missingLayers,
+  ...ownValueProblems.sort((a, b) => a.localeCompare(b, 'en', { numeric: true })),
+], { all: true });
 
 // 21. A file in tokens/locales/ is named for a language. The name is the code
 //     :lang() is built with, so it must be one Intl.DisplayNames can name,
@@ -1450,7 +1712,6 @@ check('Every type role has its own size, weight, line-height and letter-spacing'
 //     as check 18. Each problem names the role of the same size in the right
 //     kind, when there is one.
 const SPACE_KIND = /^space\.(padding|gap)\.[^.]+$/;
-const pointsAt = new Map([...semantics, ...components].map(({ path, value }) => [cssName(path), referenceIn(value)]));
 // The space role a variable reaches, as a token path, or undefined.
 const spaceRoleOf = (name) => {
   let path = [...layeredNames].find((candidate) => cssName(candidate) === name);
@@ -1564,7 +1825,6 @@ const movingCss = MOVING_DURATIONS.map(cssName);
 const MOVES = /^(?:all|transform|translate|rotate|scale|offset(?:-[\w-]+)?|inset(?:-[\w-]+)?|top|bottom|left|right)$/;
 const TIME = /^[+-]?(?:\d+\.?\d*|\.\d+)m?s$/i;
 const TIME_IN = /(?<![\w.-])[+-]?(?:\d+\.?\d*|\.\d+)m?s(?![\w-])/i;
-const EASING_WORDS = new Set(['ease', 'ease-in', 'ease-out', 'ease-in-out', 'linear', 'step-start', 'step-end']);
 const NOT_A_PROPERTY = new Set(['normal', 'allow-discrete', 'initial', 'inherit', 'unset', 'revert', 'revert-layer']);
 // What each token comes to at the end of its references: a duration, as
 // { value, unit: 'ms' }, or a curve, four numbers.
@@ -1600,7 +1860,6 @@ const splitList = (value) => {
   items.push(current.trim());
   return items.filter(Boolean);
 };
-const readsIn = (text) => [...text.matchAll(/var\(\s*(--[\w-]+)/g)].map(([, name]) => name);
 // One part of a single transition: a time, an easing, a keyword, or the
 // property. A var() is a time unless every token it reads is a curve.
 const kindOfPart = (part) => {
@@ -1685,68 +1944,6 @@ const missingMoving = MOVING_DURATIONS.filter((path) => !semanticNames.has(path)
 check('Every transition that moves something reads motion.duration.base or motion.duration.slow, so reduced motion reaches it', [
   ...missingMoving,
   ...transitionProblems.sort((a, b) => a.localeCompare(b, 'en', { numeric: true })),
-], { all: true });
-
-// 32. Every z-index reads a layer. Stacking order is four layers in
-//     tokens/semantics/layer.json, raised, sticky, overlay and toast, lowest
-//     first, and a page asks for one by name, as in
-//     z-index: var(--layer-overlay). A number of its own, such as 9999, or one
-//     worked out from a layer, such as calc(var(--layer-overlay) + 1), starts a
-//     race nobody can see from the tokens: the next one to need the top types a
-//     bigger number. Two things in one layer stack in the order they come in
-//     the page, so the overlay opened last sits on top with no number at all.
-//     It reads the same CSS as check 18. A z-index passes when it is exactly
-//     var() of a layer, or of a component token that points at one, with no
-//     fallback, or when it sets no number: auto, inherit, initial, unset,
-//     revert or revert-layer. That no script sets a z-index through an
-//     element's style is by hand.
-const LAYER = /^layer\.[^.]+$/;
-const layerTokens = [...semanticNames].filter((path) => LAYER.test(path));
-const layerList = layerTokens.length > 0
-  ? layerTokens.map((path) => `var(${cssName(path)})`).join(', ')
-  : 'none yet: add them to tokens/semantics/layer.json';
-// The layer a variable reaches, as a token path, or undefined: a layer itself,
-// or a semantic or component token that points at one, followed down.
-const layerOf = (name) => {
-  let path = pathOfCss.get(name);
-  const seen = new Set();
-  while (path && !seen.has(path)) {
-    if (LAYER.test(path) && semanticNames.has(path)) return path;
-    seen.add(path);
-    path = pointsAt.get(cssName(path));
-  }
-  return undefined;
-};
-const SETS_NO_NUMBER = new Set(['auto', 'inherit', 'initial', 'unset', 'revert', 'revert-layer']);
-const SAME_LAYER = 'To put one thing over another in the same layer, put it after the other in the page. A level no layer has is a new layer in tokens/semantics/layer.json, so ask for one rather than typing a number.';
-const zIndexProblems = declarations
-  .filter(({ property }) => property === 'z-index')
-  .flatMap(({ file, line, value }) => {
-    const where = `${file}:${line} sets z-index: ${value}`;
-    if (SETS_NO_NUMBER.has(value.toLowerCase())) return [];
-    const [, read, fallback] = value.match(/^var\(\s*(--[\w-]+)\s*(?:,\s*(.*?))?\s*\)$/) ?? [];
-    if (read && fallback !== undefined) {
-      return [`${where}, with a fallback. Drop the fallback, so the stacking order always comes from the layer: the fallback would hide a misspelt layer and the page would stack by the number instead.`];
-    }
-    if (read && layerOf(read)) return [];
-    if (read && primitiveCss.has(read)) {
-      return [`${where}, a primitive. Read the layer for that job instead: ${layerList}.`];
-    }
-    if (read) {
-      return [`${where}, which is not a layer. Read one that is: ${layerList}.`];
-    }
-    if (readsIn(value).some(layerOf)) {
-      return [`${where}, which works a number out from a layer. Read the layer as it is: ${layerList}. ${SAME_LAYER}`];
-    }
-    return [`${where}, a number of its own. Read a layer instead: ${layerList}. ${SAME_LAYER} To start a stacking order of its own without lifting anything, use isolation: isolate.`];
-  })
-  .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
-const missingLayers = layerTokens.length === 0
-  ? ['tokens/semantics/layer.json has no layers. Every z-index reads one, such as layer.overlay.']
-  : [];
-check('Every z-index reads a layer, so stacking order comes from four names and never from a number', [
-  ...missingLayers,
-  ...zIndexProblems,
 ], { all: true });
 
 if (failed > 0) {

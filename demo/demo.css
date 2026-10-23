@@ -151,7 +151,10 @@ body {
 }
 
 /* Small padding all round. Its start and end were 12px, which fits no padding
-   size, so they come in to 8px, the same as its top and bottom. */
+   size, so they come in to 8px, the same as its top and bottom. Its line
+   height is 1, a value of the tag's own, so the comment on that line says why:
+   reading the label's line height would let the Arabic locale's 1.7 make the
+   tag taller in Arabic than in English. */
 .tag {
   padding: var(--space-padding-small);
   background: var(--color-fill-brand-subtle);
@@ -159,7 +162,7 @@ body {
   border-radius: var(--radius-control);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
-  line-height: 1;
+  line-height: 1; /* own: one line set tight, so the padding alone sets the tag's height, the same in every language */
   letter-spacing: var(--type-label-letter-spacing);
 }
 
@@ -209,13 +212,14 @@ body {
   gap: var(--space-gap-medium);
 }
 
-/* The tick sits on a tinted disc, the same pair of tokens as the tag. Its 4px
-   padding inside the disc fits no padding size and stays as it is for now. */
+/* The tick sits on a tinted disc, the same pair of tokens as the tag. The
+   room between the tick and the edge of its disc is the smallest padding, so
+   in a compact panel it comes in with every other padding. */
 .tick {
   flex-shrink: 0;
   width: 12px;
   height: 12px;
-  padding: 4px;
+  padding: var(--space-padding-xsmall);
   background: var(--color-fill-brand-subtle);
   border-radius: var(--radius-pill);
   fill: none;
@@ -371,15 +375,15 @@ body {
   gap: var(--space-gap-small);
 }
 
-/* The 12px at the start and end fits no padding size, small 8px, medium 16px
-   or large 24px, so it stays 12px until the designer picks one. */
+/* Small padding at the top and bottom and medium at the start and end, as a
+   button and a notice have, so a compact panel brings all four in. Its line
+   height is 1, of the badge's own, as the tag's is. */
 .badge {
-  padding-block: var(--space-padding-small);
-  padding-inline: 12px;
+  padding: var(--space-padding-small) var(--space-padding-medium);
   border-radius: var(--radius-pill);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
-  line-height: 1;
+  line-height: 1; /* own: one line set tight, so the padding alone sets the badge's height, the same in every language */
   letter-spacing: var(--type-label-letter-spacing);
 }
 

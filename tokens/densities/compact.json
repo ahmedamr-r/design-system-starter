@@ -2,6 +2,7 @@
   "$description": "Compact, picked by data-density=\"compact\" on any element. Every padding and every gap moves one step down the size scale, so everything inside sits closer together. Sizes of type, corners and the focus ring stay as they are.",
   "space": {
     "padding": {
+      "xsmall": { "$value": "{size.50}", "$description": "4px down to 2px." },
       "small": { "$value": "{size.150}", "$description": "8px down to 6px." },
       "medium": { "$value": "{size.300}", "$description": "16px down to 12px." },
       "large": { "$value": "{size.400}", "$description": "24px down to 16px." }

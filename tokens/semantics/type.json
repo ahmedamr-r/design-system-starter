@@ -22,7 +22,7 @@
     "label": {
       "size": { "$type": "dimension", "$value": "{font.size.200}", "$description": "Buttons, links, tags and small labels." },
       "weight": { "$type": "fontWeight", "$value": "{font.weight.medium}" },
-      "line-height": { "$type": "number", "$value": "{font.line-height.150}", "$description": "Buttons, links and labels. A tag or a badge, one line set tight, uses 1 and reads no line height." },
+      "line-height": { "$type": "number", "$value": "{font.line-height.150}", "$description": "Buttons, links and labels. A tag or a badge, one line set tight, types 1 as its own, with a comment on that line that starts with own: and says why, and reads no line height." },
       "letter-spacing": { "$type": "dimension", "$value": "{font.letter-spacing.0}" }
     }
   }
