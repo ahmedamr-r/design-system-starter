@@ -2,8 +2,10 @@
 // Run it after `npm run build`; it reads the token files, the demo's CSS and
 // HTML, dist/tokens.css, tokens/contrast-pairs.json, and the scripts, workflows,
 // config files and demo files that must not name a brand, then the demo's
-// script and demo/copy.json for language and direction. It prints one line
-// per check, and exits with an error if any fail.
+// script and demo/copy.json for language and direction, and last every CSS
+// file and the CSS in every HTML file outside node_modules and the build
+// folders, and each token's $description, for anything that names a side. It
+// prints one line per check, and exits with an error if any fail.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { resolver } from './lib/resolve.js';
@@ -617,6 +619,196 @@ if (copyFile && (typeof english !== 'object' || english === null)) {
   }
 }
 check(`Every language in ${COPY} has every string English has`, copyProblems, { all: true });
+
+// 18 and 19 keep left and right out. Flex, grid and logical properties such
+// as padding-inline-start follow dir, so one stylesheet works in both
+// directions, as long as nothing names a side or asks which way the page reads.
+
+// Every CSS file in the repository, and the CSS inside each HTML file: its
+// <style> blocks and style attributes. node_modules is left out wherever it
+// sits, and so are .git and the build folders, dist/ and .vite-build/, since
+// they are written from what is checked here. In HTML everything but the CSS
+// is blanked, and a style attribute's quotes become braces, so the text keeps
+// its length, every line number stays right, and an attribute reads as one
+// rule body.
+const SKIPPED = new Set(['node_modules', '.git', 'dist', '.vite-build']);
+const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+  const path = dir === '.' ? entry.name : join(dir, entry.name);
+  if (entry.isDirectory()) return SKIPPED.has(entry.name) ? [] : walk(path);
+  return entry.isFile() ? [path] : [];
+});
+const STYLE_BLOCK = /(<style\b[^>]*>)([\s\S]*?)(<\/style\s*>)/gi;
+const STYLE_ATTRIBUTE = /(\sstyle\s*=\s*)("[^"]*"|'[^']*')/gi;
+const cssOfHtml = (html) => {
+  const text = html.replace(/<!--[\s\S]*?-->/g, blank);
+  const kept = text.replace(/[^\n]/g, ' ').split('');
+  const keep = (from, part) => part.split('').forEach((char, i) => { kept[from + i] = char; });
+  for (const { 1: open, 2: css, index } of text.matchAll(STYLE_BLOCK)) keep(index + open.length, css);
+  for (const { 1: name, 2: quoted, index } of text.matchAll(STYLE_ATTRIBUTE)) {
+    keep(index + name.length, `{${quoted.slice(1, -1)}}`);
+  }
+  return kept.join('');
+};
+const cssSources = walk('.')
+  .filter((file) => /\.(?:css|html?)$/i.test(file))
+  .map((file) => {
+    const raw = readFileSync(file, 'utf8');
+    const css = /\.css$/i.test(file) ? raw : cssOfHtml(raw);
+    return { file, text: css.replace(/\/\*[\s\S]*?\*\//g, blank) };
+  });
+
+// Every declaration, as { file, line, property, value }, with !important
+// dropped, and every selector or at-rule prelude, as { file, line, prelude }.
+const declarations = [];
+const preludes = [];
+for (const { file, text } of cssSources) {
+  for (const { 1: prelude, index } of text.matchAll(/([^{};]*)\{/g)) {
+    if (prelude.trim() !== '') preludes.push({ file, line: lineAt(text, index + prelude.search(/\S/)), prelude: prelude.trim() });
+  }
+  for (const { 1: body, index } of text.matchAll(/\{([^{}]*)\}/g)) {
+    let at = index + 1;
+    for (const part of body.split(';')) {
+      const match = part.match(/^(\s*)([-\w]+)\s*:([\s\S]*)$/);
+      if (match) {
+        declarations.push({
+          file,
+          line: lineAt(text, at + match[1].length),
+          property: match[2].toLowerCase(),
+          value: match[3].replace(/!\s*important/i, '').trim().replace(/\s+/g, ' '),
+        });
+      }
+      at += part.length + 1;
+    }
+  }
+}
+
+// A property that names a side, and the logical one that follows dir. In a
+// left-to-right line the start is the left; in a right-to-left one, the right.
+const SIDE_PROPERTY = /^(margin|padding|scroll-margin|scroll-padding|border)-(left|right)(-width|-style|-color)?$/;
+const CORNER = /^border-(top|bottom)-(left|right)-radius$/;
+const logicalFor = (property) => {
+  const side = property.match(SIDE_PROPERTY);
+  if (side) return `${side[1]}-inline-${side[2] === 'left' ? 'start' : 'end'}${side[3] ?? ''}`;
+  const corner = property.match(CORNER);
+  if (corner) return `border-${corner[1] === 'top' ? 'start' : 'end'}-${corner[2] === 'left' ? 'start' : 'end'}-radius`;
+  if (property === 'left') return 'inset-inline-start';
+  if (property === 'right') return 'inset-inline-end';
+  return undefined;
+};
+// Properties whose value can be a side, and the logical value to use instead.
+const SIDE_VALUE = {
+  'text-align': { left: 'start', right: 'end' },
+  'text-align-last': { left: 'start', right: 'end' },
+  float: { left: 'inline-start', right: 'inline-end' },
+  clear: { left: 'inline-start', right: 'inline-end' },
+};
+// The shorthands that take four values, top, right, bottom and left.
+const FOUR_SIDES = new Set(['margin', 'padding', 'inset']);
+// A value's parts, split on spaces outside brackets, so calc(1px + 2px) is one.
+const partsOf = (value) => {
+  const parts = [];
+  let depth = 0;
+  let current = '';
+  for (const char of value) {
+    if (char === '(') depth += 1;
+    if (char === ')') depth -= 1;
+    if (/\s/.test(char) && depth === 0) {
+      if (current) parts.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  if (current) parts.push(current);
+  return parts;
+};
+// A negative number inside scale(), scaleX(), scaleY(), scaleZ() or scale3d(),
+// or in the scale property, mirrors what it is on. calc(1 - 2) does not count:
+// a minus with a space after it is a subtraction.
+const NEGATIVE = /(?:^|[\s(,*/])-(?:\d|\.\d)/;
+const SCALE_FUNCTION = /\bscale(?:x|y|z|3d)?\(([^()]*(?:\([^()]*\)[^()]*)*)\)/gi;
+const flips = ({ property, value }) =>
+  (property === 'scale' && NEGATIVE.test(value)) ||
+  [...value.matchAll(SCALE_FUNCTION)].some(([, args]) => NEGATIVE.test(args));
+
+const sideProblems = (declaration) => {
+  const { file, line, property, value } = declaration;
+  const where = `${file}:${line}`;
+  const problems = [];
+  const logical = logicalFor(property);
+  if (logical) {
+    problems.push(`${where} sets ${property}, which names a side. Use ${logical}, which follows dir, so it lands on the same side of the text in either direction.`);
+  }
+  const swap = SIDE_VALUE[property]?.[value.toLowerCase()];
+  if (swap) {
+    problems.push(`${where} sets ${property}: ${value}, which names a side. Use ${property}: ${swap}, which follows dir.`);
+  }
+  if (FOUR_SIDES.has(property)) {
+    const parts = partsOf(value);
+    if (parts.length === 4 && parts[1].toLowerCase() !== parts[3].toLowerCase()) {
+      const [top, right, bottom, left] = parts;
+      const block = top === bottom ? top : `${top} ${bottom}`;
+      problems.push(`${where} sets ${property}: ${value}, which gives the right ${right} and the left ${left}. Use ${property}-block: ${block} and ${property}-inline: ${left} ${right}, so the start and the end follow dir.`);
+    }
+  }
+  if (property === 'direction') {
+    problems.push(`${where} sets direction. The direction comes from the language: set lang and dir together in the HTML, and leave direction out of the CSS.`);
+  }
+  if (flips(declaration)) {
+    problems.push(`${where} flips something with a negative scale (${property}: ${value}). A mirrored shape is right for one direction only: draw it the way it should read, and place it with logical properties.`);
+  }
+  return problems;
+};
+const directionSelector = ({ file, line, prelude }) => {
+  const problems = [];
+  if (/\[\s*dir\b/i.test(prelude)) {
+    problems.push(`${file}:${line} checks the direction with [dir] in "${prelude}". Use logical properties, such as margin-inline-start, so one rule works in both directions.`);
+  }
+  if (/:dir\(/i.test(prelude)) {
+    problems.push(`${file}:${line} checks the direction with :dir() in "${prelude}". Use logical properties, such as margin-inline-start, so one rule works in both directions.`);
+  }
+  return problems;
+};
+
+// 18. No CSS names a side, sets the direction, asks for it with [dir] or
+//     :dir(), or mirrors something with a negative scale.
+check('No CSS names a side, sets or checks the direction, or flips with a negative scale', [
+  ...preludes.flatMap(directionSelector),
+  ...declarations.flatMap(sideProblems),
+].sort((a, b) => a.localeCompare(b, 'en', { numeric: true })), { all: true });
+
+// 19. No token's $description uses left or right for a side. "Left out" is
+//     not a side, so the word counts only in a phrase about where something
+//     sits: left and right, on the right, the left edge, right-to-left.
+const SIDE_WORDS = String.raw`(?:left|right)`;
+const SIDE_PHRASE = new RegExp([
+  String.raw`\b${SIDE_WORDS}\s*(?:and|or|to|\/|-to-)\s*${SIDE_WORDS}\b`,
+  String.raw`\b(?:on|to|at|from|toward|towards)\s+(?:the|its|their)\s+${SIDE_WORDS}\b`,
+  String.raw`\b${SIDE_WORDS}(?:most|ward|-hand|-aligned|\s+aligned)\b`,
+  String.raw`\b${SIDE_WORDS}[\s-]+(?:side|sides|edge|edges|padding|margin|margins|border|borders|corner|corners|inset|gutter|gutters|column|columns|half)\b`,
+].join('|'), 'i');
+const descriptions = [];
+for (const file of jsonFiles('tokens')) {
+  const text = readFileSync(file, 'utf8');
+  if (text.trim() === '') continue;
+  const visit = (node, path) => {
+    if (!node || typeof node !== 'object') return;
+    if (typeof node.$description === 'string') descriptions.push({ file, text, path: path.join('.'), description: node.$description });
+    for (const [key, child] of Object.entries(node)) if (!key.startsWith('$')) visit(child, [...path, key]);
+  };
+  try {
+    visit(JSON.parse(text), []);
+  } catch {
+    // Not valid JSON; the build and the checks above report it.
+  }
+}
+check('No token\'s $description uses left or right for a side', descriptions.flatMap(({ file, text, path, description }) => {
+  const phrase = description.match(SIDE_PHRASE)?.[0];
+  if (!phrase) return [];
+  const at = text.indexOf(JSON.stringify(description).slice(1, -1));
+  const where = at === -1 ? file : `${file}:${lineAt(text, at)}`;
+  return [`${where} ${path || 'the file'}'s $description says "${phrase}". Say start and end, the sides a line of text begins and ends on, since in Arabic the start is on the right.`];
+}), { all: true });
 
 if (failed > 0) {
   console.log(`\n${failed} check${failed === 1 ? '' : 's'} failed.`);

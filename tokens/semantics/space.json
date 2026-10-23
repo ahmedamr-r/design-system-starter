@@ -1,7 +1,7 @@
 {
   "space": {
     "$type": "dimension",
-    "control-x": { "$value": "{size.400}", "$description": "Left and right padding inside buttons and inputs." },
+    "control-x": { "$value": "{size.400}", "$description": "Padding at the start and end of buttons and inputs, the sides their text begins and ends on." },
     "control-y": { "$value": "{size.200}", "$description": "Top and bottom padding inside buttons and inputs." },
     "surface": { "$value": "{size.600}", "$description": "Padding inside cards and panels." },
     "stack": { "$value": "{size.300}", "$description": "Gap between stacked items inside a card." }
