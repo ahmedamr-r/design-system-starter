@@ -14,6 +14,7 @@
     "demo": "npm run build && vite --open /demo/"
   },
   "devDependencies": {
+    "@fontsource/ibm-plex-sans-arabic": "^5.3.0",
     "style-dictionary": "^5.6.1",
     "vite": "^8.3.4"
   }

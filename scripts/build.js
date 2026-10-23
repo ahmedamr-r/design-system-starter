@@ -2,16 +2,30 @@
 //   1. primitives on :root, as plain values;
 //   2. semantics on :root and on [data-brand], as var() references to primitives.
 //      A semantic whose answer in tokens/modes/dark.json differs from its light
-//      one is written light-dark(light, dark), both still references;
+//      one is written light-dark(light, dark), both still references. The type
+//      semantics, everything under type, have a block of their own, on [lang]
+//      as well;
 //   3. component tokens, the same way, as references to semantics;
 //   4. one block per brand, [data-brand="<name>"], re-pointing some semantics
 //      (and, for a component a brand restyles on its own, component tokens);
-//   5. color-scheme: "light dark" on :root, so a page that sets no mode follows
+//   5. one block per locale, :lang(<code>), re-pointing type semantics;
+//   6. color-scheme: "light dark" on :root, so a page that sets no mode follows
 //      the reader's setting, then one value per data-mode.
 // Keeping the references means a brand can re-point one semantic and everything
 // that reads it follows. Declaring semantics on [data-brand] as well makes a
 // brand set on any element re-resolve them right there, instead of inheriting
 // the colours already worked out for the page.
+//
+// Locales work the same way for type. :lang(ar) matches an element whose
+// language is ar or any ar- code, such as ar-EG, set on it or on an ancestor,
+// so tokens/locales/ar.json reaches every element inside lang="ar-EG". The
+// type semantics are declared on [lang] too, so an element that sets another
+// language inside, such as an English label in an Arabic panel, gets the
+// default type back unless a locale block below matches it. No other token is
+// declared on [lang]: that would put a token a brand re-points, such as the
+// button's radius, back to its value with no brand on anything inside the
+// brand that sets a language. The locale blocks come after the brands, so they
+// win over [data-brand] on an element that sets both.
 //
 // A mode needs no block of semantics the way a brand does. light-dark() picks
 // its answer where a colour is used, from that element's color-scheme, and
@@ -41,6 +55,7 @@ const PARTS = 'dist/.parts/';
 const BASE = ['tokens/primitives/**/*.json', 'tokens/semantics/**/*.json', 'tokens/components/**/*.json'];
 const DARK = 'tokens/modes/dark.json';
 const inLayer = (layer) => (token) => token.filePath.startsWith(`tokens/${layer}/`);
+const isType = (token) => token.path[0] === 'type';
 
 // Semantics and brands point at tokens that sit in another block, which
 // Style Dictionary reports as "filtered out references". The split is on
@@ -92,8 +107,14 @@ const base = new StyleDictionary({
     {
       destination: 'semantics.css',
       format: 'css/variables-light-dark',
-      filter: inLayer('semantics'),
+      filter: (token) => inLayer('semantics')(token) && !isType(token),
       options: { outputReferences: true, selector: ':root, [data-brand]' },
+    },
+    {
+      destination: 'type.css',
+      format: 'css/variables',
+      filter: (token) => inLayer('semantics')(token) && isType(token),
+      options: { outputReferences: true, selector: ':root, [data-brand], [lang]' },
     },
     {
       destination: 'components.css',
@@ -155,6 +176,35 @@ for (const brand of brands) {
 }
 const built = brands.filter((brand) => !empty.includes(brand));
 
+// One block per file in tokens/locales/, named by its language code, such as
+// ar.json. npm run check makes sure the name is a language and that the file
+// sets only type semantics. A file that is empty or sets nothing gets no block.
+const locales = existsSync('tokens/locales')
+  ? (await readdir('tokens/locales')).filter((file) => file.endsWith('.json')).map((file) => file.replace(/\.json$/, '')).sort()
+  : [];
+const localeBlocks = [];
+for (const locale of locales) {
+  const source = `tokens/locales/${locale}.json`;
+  if ((await readFile(source, 'utf8')).trim() === '') continue;
+  const sd = new StyleDictionary({
+    log,
+    include: BASE,
+    source: [source],
+    platforms: platform([
+      {
+        destination: `locale-${locale}.css`,
+        format: 'css/variables',
+        filter: (token) => token.isSource,
+        options: { outputReferences: true, selector: `:lang(${locale})` },
+      },
+    ]),
+  });
+  const { allTokens } = await sd.getPlatformTokens('css');
+  if (!allTokens.some((token) => token.isSource)) continue;
+  localeBlocks.push(locale);
+  await sd.buildAllPlatforms();
+}
+
 // color-scheme picks the answer every light-dark() gives. These come after the
 // :root blocks, so data-mode on <html> wins over the "light dark" set there.
 const schemes = dark.size === 0 ? [] : [
@@ -163,7 +213,14 @@ const schemes = dark.size === 0 ? [] : [
   '[data-mode="dark"] {\n  color-scheme: dark;\n}\n',
 ];
 
-const order = ['primitives.css', 'semantics.css', 'components.css', ...built.map((b) => `brand-${b}.css`)];
+const order = [
+  'primitives.css',
+  'semantics.css',
+  'type.css',
+  'components.css',
+  ...built.map((b) => `brand-${b}.css`),
+  ...localeBlocks.map((l) => `locale-${l}.css`),
+];
 const blocks = await Promise.all(order.map((file) => readFile(PARTS + file, 'utf8')));
 await mkdir('dist', { recursive: true });
 await writeFile(
@@ -186,4 +243,5 @@ console.log(`Wrote dist/tokens.css, dist/brands.json and dist/brands.d.ts with $
 for (const brand of empty) {
   console.log(`Left out ${brand}: tokens/brands/${brand}.json sets nothing, so data-brand="${brand}" looks like no brand and dist/brands.json does not list it. npm run check lists what it needs.`);
 }
+console.log(`Wrote ${localeBlocks.length} locale block${localeBlocks.length === 1 ? '' : 's'} after the brands: ${localeBlocks.map((l) => `:lang(${l})`).join(', ') || 'none'}`);
 if (dark.size > 0) console.log(`Dark mode differs from light in ${paired.length} semantics: ${paired.join(', ')}`);

@@ -1,0 +1,9 @@
+{
+  "$description": "Arabic, picked by lang=\"ar\" or any Arabic code such as ar-EG. Arabic letters get IBM Plex Sans Arabic, and body text gets more room between lines, 1.7, for the dots and marks above and below the letters. Everything else keeps the default type.",
+  "type": {
+    "family": { "$value": "{font.family.arabic}" },
+    "body": {
+      "line-height": { "$value": "{font.line-height.170}" }
+    }
+  }
+}

@@ -1,11 +1,35 @@
 /* Reads semantic tokens, and the button reads its own component tokens. npm run check fails if a primitive, a raw colour, or a variable the build does not write shows up here. */
 
+/* IBM Plex Sans Arabic, the Arabic letters only, in the three weights the
+   type tokens use: regular, medium and semibold. These files hold no Latin
+   letters and no 0 to 9, so those keep the system face that comes after it in
+   font.family.arabic. Vite finds them in node_modules. */
+@import '@fontsource/ibm-plex-sans-arabic/arabic-400.css';
+@import '@fontsource/ibm-plex-sans-arabic/arabic-500.css';
+@import '@fontsource/ibm-plex-sans-arabic/arabic-600.css';
+
 body {
   margin: 0;
   background: var(--color-surface-page);
   color: var(--color-text-default);
   font-family: var(--type-family);
   font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-line-height);
+}
+
+/* A font family, weight or line height an element inherits was worked out on
+   the ancestor that set it, in that ancestor's language. The type tokens are
+   declared again on every element with a lang, and :lang() re-points them for
+   a locale, so each of these reads them itself: an Arabic panel gets the
+   Arabic family and 1.7, and an English label inside it gets the default type
+   back. The card does too, the way it sets its own colours, so its type is
+   right wherever it is put, not only where an ancestor read the tokens. Rules
+   further down that set their own weight, such as the labels', come later and
+   win. */
+.card,
+[lang] {
+  font-family: var(--type-family);
   font-weight: var(--type-body-weight);
   line-height: var(--type-body-line-height);
 }

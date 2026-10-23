@@ -5,8 +5,9 @@
 // script and demo/copy.json for language and direction, and last every CSS
 // file and the CSS in every HTML file outside node_modules and the build
 // folders, and each token's $description, for anything that names a side, and
-// that same CSS again for line heights that read no token. It prints one line
-// per check, and exits with an error if any fail.
+// that same CSS again for line heights that read no token, then the files in
+// tokens/locales/, and that same CSS once more for italics and capitals. It
+// prints one line per check, and exits with an error if any fail.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { resolver } from './lib/resolve.js';
@@ -270,15 +271,51 @@ check('Every semantic and component token in dist/tokens.css is a var() referenc
   .filter(({ value }) => !isReference(value))
   .map(({ name, value, selector }) => `${name} is baked to ${value} under ${selector}. A brand that re-points what it reads will not reach it.`));
 
-// 6. Semantics and component tokens are declared on every brand scope, before the brands.
+// 6. Semantics and component tokens are declared on every brand scope, before
+//    the brands. The type tokens, the semantics under type, are declared on
+//    [lang] as well, so an element that sets a language gets the default type
+//    back unless a locale re-points it, and no other token is: on [lang] it
+//    would put a token a brand re-points back to its value with no brand, on
+//    anything inside the brand that sets a language. Each file in
+//    tokens/locales/ that sets something is a :lang(<code>) block, after the
+//    brands, so :lang(ar) also reaches lang="ar-EG" and wins over [data-brand].
+const LOCALES = join('tokens', 'locales');
+const localeFiles = jsonFiles(LOCALES);
+const locales = localeFiles.flatMap(tokensIn);
+const typeCss = new Set([...semanticNames].filter((path) => path.startsWith('type.')).map(cssName));
+// A block for one language: :lang(ar), or one built the wrong way, such as
+// [lang="ar"], which the locale problems below report on their own.
+const isLocaleBlock = (selector) => /:lang\(|\[\s*lang\s*[~|^$*]?=/i.test(selector);
+const scopesOf = (selector) => selector.split(',').map((part) => part.trim());
 const firstBrand = blocks.findIndex(({ selector }) => isBrandBlock(selector));
+const lastBrand = blocks.findLastIndex(({ selector }) => isBrandBlock(selector));
 const lastBase = blocks.findLastIndex(({ selector, declarations }) =>
-  !isBrandBlock(selector) && declarations.some(({ name }) => semanticCss.has(name)));
-check('Semantic and component tokens are declared on :root and [data-brand], before the brands', [
-  ...builtSemantics
-    .filter(({ selector }) => !isBrandBlock(selector))
-    .filter(({ selector }) => !selector.split(',').some((part) => part.trim() === '[data-brand]'))
+  !isBrandBlock(selector) && !isLocaleBlock(selector) && declarations.some(({ name }) => semanticCss.has(name)));
+const baseDeclarations = builtSemantics.filter(({ selector }) => !isBrandBlock(selector) && !isLocaleBlock(selector));
+const localeBlockProblems = localeFiles
+  .filter((file) => locales.some((token) => token.file === file))
+  .flatMap((file) => {
+    const code = basename(file, '.json');
+    const at = blocks.findIndex(({ selector }) => scopesOf(selector).includes(`:lang(${code})`));
+    if (at === -1) {
+      return [`${file} has no :lang(${code}) block in dist/tokens.css. Build each locale as a :lang() block, so lang="${code}" reads it, and so does any lang that starts with ${code}-.`];
+    }
+    if (at < lastBrand) {
+      return [`The :lang(${code}) block from ${file} comes before a brand block. Put the locale blocks after the brands, so a brand's [data-brand] does not undo them on an element that sets both.`];
+    }
+    return [];
+  });
+check('Semantic and component tokens are declared on :root and [data-brand], before the brands, type tokens on [lang] as well, and each locale is a :lang() block after the brands', [
+  ...localeBlockProblems,
+  ...baseDeclarations
+    .filter(({ selector }) => !scopesOf(selector).includes('[data-brand]'))
     .map(({ name, selector }) => `${name} is declared under "${selector}" only. Anything that reads it inside a data-brand would keep the page's value.`),
+  ...baseDeclarations
+    .filter(({ name, selector }) => typeCss.has(name) && !scopesOf(selector).includes('[lang]'))
+    .map(({ name, selector }) => `${name} is a type token declared under "${selector}" without [lang]. An element that sets a language inside an Arabic one, such as an English label, would keep the Arabic type. Declare the type tokens on ":root, [data-brand], [lang]".`),
+  ...baseDeclarations
+    .filter(({ name, selector }) => !typeCss.has(name) && scopesOf(selector).includes('[lang]'))
+    .map(({ name, selector }) => `${name} is declared under "${selector}", and only type tokens go on [lang]. Anything inside a brand that sets a language would get ${name} back at its value with no brand.`),
   ...(firstBrand !== -1 && lastBase > firstBrand ? ['A brand block comes before the tokens it re-points, so they would undo it.'] : []),
 ]);
 
@@ -863,6 +900,66 @@ check('Every line height in the CSS reads a token, or is 1', declarations.flatMa
   if (inFont !== undefined) return lineHeightProblem(where, `sets the line height in font: ${value}`, inFont);
   const setAgain = declarations.slice(at + 1).some((later) => later.rule === rule && later.property === 'line-height');
   return setAgain ? [] : [`${where} sets font: ${value}, which sets the line height back to normal. Add a line-height after it that reads ${lineHeightList}, or set font-size and font-family on their own.`];
+}).sort((a, b) => a.localeCompare(b, 'en', { numeric: true })), { all: true });
+
+// 21. A file in tokens/locales/ is named for a language, and sets only type
+//     tokens that exist. The name is the code :lang() is built with, so it
+//     must be one Intl.DisplayNames can name, such as ar or ar-EG. A locale
+//     changes how a language is set, its family, weights, sizes and line
+//     heights, and nothing else: colours and shapes belong to brands and modes.
+const languageNames = new Intl.DisplayNames(['en'], { type: 'language', fallback: 'none' });
+const languageName = (code) => {
+  try {
+    return languageNames.of(code);
+  } catch {
+    return undefined;
+  }
+};
+const typeNames = [...semanticNames].filter((path) => path.startsWith('type.'));
+check(`Each file in ${LOCALES} is named for a language and sets only type tokens that exist`, localeFiles.flatMap((file) => {
+  const code = basename(file, '.json');
+  const problems = [];
+  if (!languageName(code)) {
+    problems.push(`${file} is named "${code}", which Intl.DisplayNames does not know as a language. Name it by a language code, such as ar.json for Arabic or ar-EG.json for Arabic in Egypt: the name is the code in :lang().`);
+  }
+  for (const { path } of locales.filter((token) => token.file === file)) {
+    if (!path.startsWith('type.')) {
+      problems.push(`${file}: ${path} is not a type token. A locale re-points type tokens and nothing else: ${typeNames.join(', ')}.`);
+    } else if (!semanticNames.has(path)) {
+      problems.push(`${file}: ${path} is not a type token that exists. Did you mean ${closest(path, typeNames)}?`);
+    }
+  }
+  return problems;
+}), { all: true });
+
+// 22. No CSS sets italics or capitals. Arabic has no capitals, and the Arabic
+//     family has no italic, so a browser would slant its letters on its own.
+//     Emphasis uses weight, the same in every language. It reads the same CSS
+//     as check 18: font-style and the font shorthand with italic or oblique,
+//     text-transform with uppercase or capitalize, small caps and the other
+//     capital forms in font-variant, font-variant-caps or the font shorthand,
+//     and the small-cap features in font-feature-settings.
+const ITALIC = /\b(?:italic|oblique)\b/i;
+const CAPITAL_TRANSFORM = /\b(?:uppercase|capitalize)\b/i;
+const CAPITAL_VARIANT = /\b(?:small-caps|all-small-caps|petite-caps|all-petite-caps|unicase|titling-caps)\b/i;
+const CAPITAL_FEATURE = /(["'])(?:smcp|c2sc|pcap|c2pc|unic|titl)\1/i;
+const WEIGHT_INSTEAD = 'Show emphasis with weight instead, such as font-weight: var(--type-title-weight).';
+check('No CSS sets italics or capitals, so emphasis uses weight', declarations.flatMap(({ file, line, property, value }) => {
+  const where = `${file}:${line}`;
+  const problems = [];
+  if ((property === 'font-style' || property === 'font') && ITALIC.test(value)) {
+    problems.push(`${where} sets ${property}: ${value}, a slanted style. The Arabic family has no italic, so a browser would slant its letters on its own. ${WEIGHT_INSTEAD}`);
+  }
+  if (property === 'text-transform' && CAPITAL_TRANSFORM.test(value)) {
+    problems.push(`${where} sets text-transform: ${value}. Arabic has no capitals, so it would do nothing there. Write the words the way they should read, and ${WEIGHT_INSTEAD.charAt(0).toLowerCase()}${WEIGHT_INSTEAD.slice(1)}`);
+  }
+  if (['font-variant', 'font-variant-caps', 'font'].includes(property) && CAPITAL_VARIANT.test(value)) {
+    problems.push(`${where} sets ${property}: ${value}, which asks for capitals. Arabic has none. ${WEIGHT_INSTEAD}`);
+  }
+  if (property === 'font-feature-settings' && CAPITAL_FEATURE.test(value)) {
+    problems.push(`${where} sets font-feature-settings: ${value}, which turns on small capitals. Arabic has none. ${WEIGHT_INSTEAD}`);
+  }
+  return problems;
 }).sort((a, b) => a.localeCompare(b, 'en', { numeric: true })), { all: true });
 
 if (failed > 0) {

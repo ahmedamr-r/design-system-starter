@@ -4,6 +4,11 @@
       "sans": {
         "$type": "fontFamily",
         "$value": ["system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"]
+      },
+      "arabic": {
+        "$type": "fontFamily",
+        "$description": "IBM Plex Sans Arabic for Arabic letters, then the system face. The demo loads only its Arabic letters, so Latin letters and digits fall through to the system face.",
+        "$value": ["IBM Plex Sans Arabic", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"]
       }
     },
     "size": {
@@ -22,7 +27,8 @@
     "line-height": {
       "$type": "number",
       "$description": "Line heights as plain numbers, multiples of the font size, so each follows whatever size it is used with. Steps are named by the number times 100, so 150 is 1.5.",
-      "150": { "$value": 1.5 }
+      "150": { "$value": 1.5 },
+      "170": { "$value": 1.7 }
     }
   }
 }
