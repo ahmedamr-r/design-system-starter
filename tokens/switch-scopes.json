@@ -1,0 +1,31 @@
+{
+  "$description": "Which tokens each switch may change. scripts/build.js and scripts/check.js both read this one list. A switch is a folder with one file per option that differs from the default, and folder names it. block is the selector each file in it is written under, with {name} for the file name, and null for a switch the build writes another way. declaredOn is the attribute every token this switch may change is declared on, with the tokens that read one of them, so a switch set on any element works them out again right there; null when the switch needs none. mayChange lists what its files may set: groups of tokens, each covering every token under it, or the path of a file whose tokens are the list. No token is in two lists, so no switch puts back a token another switch changed on an ancestor.",
+  "brand": {
+    "$description": "One file per brand, picked by data-brand. A brand may set what tokens/brands/_template.json lists, today the ten steps of the brand ramp and the button's corners, so this list points at it instead of repeating it.",
+    "folder": "tokens/brands",
+    "block": "[data-brand=\"{name}\"]",
+    "declaredOn": "[data-brand]",
+    "mayChange": "tokens/brands/_template.json"
+  },
+  "mode": {
+    "$description": "dark.json, picked by data-mode, which sets color-scheme. It answers the colour semantics but the steps of the brand ramp. It needs no attribute to declare them on: the build writes each one whose answers differ as light-dark(), and light-dark() picks its answer where the colour is used.",
+    "folder": "tokens/modes",
+    "block": null,
+    "declaredOn": null,
+    "mayChange": ["color.surface", "color.fill", "color.text", "color.border"]
+  },
+  "locale": {
+    "$description": "One file per language whose type differs from the default, picked by lang. :lang() matches the language and every regional code that starts with it.",
+    "folder": "tokens/locales",
+    "block": ":lang({name})",
+    "declaredOn": "[lang]",
+    "mayChange": ["type"]
+  },
+  "density": {
+    "$description": "One file per density that differs from the default, picked by data-density. Only a density changes spacing, so a card that sets its own brand or language inside a compact panel stays compact.",
+    "folder": "tokens/densities",
+    "block": "[data-density=\"{name}\"]",
+    "declaredOn": "[data-density]",
+    "mayChange": ["space.padding", "space.gap"]
+  }
+}

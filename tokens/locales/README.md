@@ -12,4 +12,4 @@ Arabic has no capitals, and IBM Plex Sans Arabic has no italic, so no CSS sets i
 
 Direction is not set here. `dir="rtl"` moves things to the other side, and components handle that with logical properties such as `padding-inline-start`, so no token needs a left and a right version.
 
-`npm run check` holds these files to the rules: check 21 for the name and what a file sets, check 6 for the `:lang()` blocks and `[lang]`, and check 22 for italics and capitals. The rules are under Type and language in `AGENTS.md`.
+`npm run check` holds these files to the rules: check 21 for the name, check 30 for what a file sets, from the list in `tokens/switch-scopes.json`, check 6 for the `:lang()` blocks and `[lang]`, and check 22 for italics and capitals. The rules are under Type and language in `AGENTS.md`.

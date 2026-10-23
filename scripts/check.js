@@ -14,13 +14,17 @@
 // style in the CSS keeps its outline and draws no box-shadow, then that every
 // value in dist/tokens.css is one CSS can read, then that every type role has
 // its four parts, and at the very end that padding in the CSS reads a padding
-// role and a gap or a margin a gap role. Check 12, that the CSS reads only variables
+// role and a gap or a margin a gap role, and last of all that every switch
+// file sets only what tokens/switch-scopes.json lets its switch change. Check
+// 6 reads that list too, for where each token is declared. Check 12, that the
+// CSS reads only variables
 // the build writes, reads the same CSS as the side checks: every CSS file and
 // the CSS in every HTML file. It prints one line per check, and exits with an
 // error if any fail.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { resolver } from './lib/resolve.js';
+import { SCOPES, readScopes } from './lib/scopes.js';
 
 // ---------------------------------------------------------------- reading
 
@@ -55,19 +59,25 @@ const primitives = layer('primitives');
 const semantics = layer('semantics');
 const components = layer('components');
 const modes = layer('modes');
+const densities = layer('densities');
+
+// tokens/switch-scopes.json: which tokens each switch may change. Check 6
+// reads it for where each token is declared, and check 30 holds every switch
+// file to it.
+const { switches, problems: scopeProblems } = readScopes();
 
 // A file in tokens/brands/ whose name starts with an underscore is not a
 // brand, here as in the build. _template.json is one: it lists every token a
 // brand may set, each at its value with no brand, for a new brand to be copied
-// from. Checks 1 and 2 still read every file in the folder; checks 4, 8 and 14
-// read the brands.
+// from. Checks 1 and 2 still read every file in the folder; checks 4, 8, 14
+// and 30 read the brands, and check 30 reads the template through
+// tokens/switch-scopes.json.
 const BRANDS = join('tokens', 'brands');
 const TEMPLATE = join(BRANDS, '_template.json');
 const isBrand = (file) => !basename(file).startsWith('_');
 const brandFolder = layer('brands');
 const brandFiles = jsonFiles(BRANDS).filter(isBrand);
 const brands = brandFolder.filter(({ file }) => isBrand(file));
-const template = brandFolder.filter(({ file }) => file === TEMPLATE);
 
 const names = (tokens) => new Set(tokens.map((token) => token.path));
 const primitiveNames = names(primitives);
@@ -118,7 +128,7 @@ const demoCss = existsSync('demo')
   : [];
 
 check('Colour values appear only in tokens/primitives', [
-  ...[...semantics, ...components, ...brandFolder]
+  ...[...semantics, ...components, ...brandFolder, ...densities]
     .filter(({ value }) =>
       typeof value === 'object' ? 'colorSpace' in value : COLOUR_LITERAL.test(String(value)),
     )
@@ -134,8 +144,8 @@ check('Colour values appear only in tokens/primitives', [
 
 // 2. Every token points one layer down: a step of the brand ramp at a
 //    primitive, any other semantic at a primitive or a step of the ramp, and a
-//    component token at a semantic. A brand or mode follows the rule of the
-//    token it re-points.
+//    component token at a semantic. A brand, mode or density follows the rule
+//    of the token it re-points.
 const primitivesOrSteps = new Set([...primitiveNames, ...rampSteps]);
 const mayPointAt = (path) => {
   if (componentNames.has(path)) return { allowed: semanticNames, what: 'a semantic token' };
@@ -150,7 +160,7 @@ const pointsDown = (token) => {
   return [];
 };
 check('Every token points one layer down, or at a step of the brand ramp',
-  [...semantics, ...components, ...brandFolder, ...modes].flatMap(pointsDown));
+  [...semantics, ...components, ...brandFolder, ...modes, ...densities].flatMap(pointsDown));
 
 // 3. The demo reads semantic tokens, never a primitive and never a step of the
 //    brand ramp. A step has no dark answer: color.text.link turns lighter in
@@ -178,8 +188,10 @@ check('The demo reads no primitive and no step of the brand ramp', demoReads.fla
   return [];
 }));
 
-// 4. A brand file sets every step of the brand ramp, its only colours, and
-//    nothing tokens/brands/_template.json does not list.
+// 4. A brand file sets every step of the brand ramp, step for step on one
+//    primitive ramp. What else it may set, the tokens
+//    tokens/brands/_template.json lists, is check 30's, which reads that list
+//    through tokens/switch-scopes.json.
 function closest(word, options) {
   const distance = (a, b) => {
     const row = Array.from({ length: b.length + 1 }, (_, i) => i);
@@ -200,30 +212,15 @@ function closest(word, options) {
 // the same step of one primitive ramp, as color.brand.600 at {color.blue.600}.
 // The brand semantics read the steps, so they follow the brand without being
 // re-pointed, and each keeps the dark answer tokens/modes/dark.json gives it.
-// Anything else a brand sets, such as button.radius, must be listed in the
-// template. A brand file that sets nothing gets one problem saying what it is
-// missing: the build writes no block for it, and check 14 leaves it out.
+// A brand file that sets nothing gets one problem saying what it is missing:
+// the build writes no block for it, and check 14 leaves it out.
 const PRIMITIVE_STEP = /^color\.([^.]+)\.([^.]+)$/;
-const hasTemplate = existsSync(TEMPLATE);
-const templateNames = names(template);
 const brandProblems = (file) => {
   const own = brands.filter((token) => token.file === file);
   if (own.length === 0) {
     return [`${file} sets nothing. It is missing every step of the brand ramp: ${[...rampSteps].join(', ')}. Copy ${TEMPLATE}, which lists them and every other token a brand may set, and point each step at the same step of one primitive ramp. Until then the build writes no block for it, and the contrast check leaves it out.`];
   }
   const problems = [];
-  for (const token of own) {
-    const { path } = token;
-    if (!layeredNames.has(path)) {
-      problems.push(`${file}: ${path} is not a semantic or component token. Did you mean ${closest(path, templateNames.size > 0 ? templateNames : layeredNames)}?`);
-    } else if (!rampSteps.has(path) && isColour(token)) {
-      problems.push(componentNames.has(path)
-        ? `${file}: ${path} is a colour, and a brand sets no colour but the brand ramp. ${path} follows the ramp through the semantic it reads in tokens/components/.`
-        : `${file}: ${path} is a colour, and a brand sets no colour but the brand ramp. Point ${path} at a step of the ramp in tokens/semantics/ for light and tokens/modes/dark.json for dark, and every brand reaches it.`);
-    } else if (hasTemplate && !templateNames.has(path)) {
-      problems.push(`${file}: ${path} is not in ${TEMPLATE}, the list of every token a brand may set. Take it out, or, if every brand should be able to set it, add it to the template first, at its value with no brand.`);
-    }
-  }
   const steps = own.filter(({ path }) => rampSteps.has(path));
   const missing = [...rampSteps].filter((path) => !steps.some((token) => token.path === path));
   if (missing.length > 0) {
@@ -248,10 +245,7 @@ const brandProblems = (file) => {
   }
   return problems;
 };
-check(`Brand files set every step of the brand ramp, step for step on one primitive ramp, and nothing ${TEMPLATE} does not list`, [
-  ...(hasTemplate ? [] : [`${TEMPLATE} is missing. It lists every token a brand may set, each at its value with no brand, and a new brand is copied from it.`]),
-  ...brandFiles.flatMap(brandProblems),
-]);
+check('Brand files set every step of the brand ramp, step for step on one primitive ramp', brandFiles.flatMap(brandProblems));
 
 // 5 and 6 read the built CSS.
 if (!existsSync('dist/tokens.css')) {
@@ -266,7 +260,6 @@ const blocks = [...readFileSync('dist/tokens.css', 'utf8')
     declarations: [...body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map(([, name, value]) => ({ name, value: value.trim() })),
   }));
 const semanticCss = new Set([...layeredNames].map(cssName));
-const isBrandBlock = (selector) => /\[data-brand="/.test(selector);
 const builtSemantics = blocks.flatMap(({ selector, declarations }) =>
   declarations.filter(({ name }) => semanticCss.has(name)).map((declaration) => ({ ...declaration, selector })),
 );
@@ -281,53 +274,96 @@ check('Every semantic and component token in dist/tokens.css is a var() referenc
   .filter(({ value }) => !isReference(value))
   .map(({ name, value, selector }) => `${name} is baked to ${value} under ${selector}. A brand that re-points what it reads will not reach it.`));
 
-// 6. Semantics and component tokens are declared on every brand scope, before
-//    the brands. The type tokens, the semantics under type, are declared on
-//    [lang] as well, so an element that sets a language gets the default type
-//    back unless a locale re-points it, and no other token is: on [lang] it
-//    would put a token a brand re-points back to its value with no brand, on
-//    anything inside the brand that sets a language. Each file in
-//    tokens/locales/ that sets something is a :lang(<code>) block, after the
-//    brands, so :lang(ar) also reaches lang="ar-EG" and wins over [data-brand].
+// 6. Every semantic and component token is declared on :root, and on the
+//    attribute of each switch in tokens/switch-scopes.json that may change it
+//    or anything it reads, and on no other. What a token reads is every var()
+//    in its value on :root, light-dark() answers included, followed all the
+//    way down. Declared on a switch's attribute, a token is worked out again
+//    on any element that sets that switch, so a token a brand reaches through
+//    the ramp, such as color.fill.brand, must be on [data-brand]. Declared on
+//    the attribute of a switch that cannot change it, it is put back to its
+//    value with no switch at all on every such element, undoing any switch an
+//    ancestor set: spacing on [data-brand] would make a card that sets its own
+//    brand inside a compact panel lose the compact spacing. A switch whose
+//    declaredOn is null, the mode, needs no attribute: light-dark() picks its
+//    answer where the colour is used. Each file of a switch with a block that
+//    sets something has its block, named as the list says, such as
+//    :lang(ar) or [data-density="compact"], after every block of declarations
+//    above, so it wins over them on an element that sets both. No token is in
+//    two lists, check 30, so the blocks of two switches never set the same
+//    token, and their order between them does not matter.
 const LOCALES = join('tokens', 'locales');
 const localeFiles = jsonFiles(LOCALES);
 const locales = localeFiles.flatMap(tokensIn);
-const typeCss = new Set([...semanticNames].filter((path) => path.startsWith('type.')).map(cssName));
-// A block for one language: :lang(ar), or one built the wrong way, such as
-// [lang="ar"], which the locale problems below report on their own.
-const isLocaleBlock = (selector) => /:lang\(|\[\s*lang\s*[~|^$*]?=/i.test(selector);
 const scopesOf = (selector) => selector.split(',').map((part) => part.trim());
-const firstBrand = blocks.findIndex(({ selector }) => isBrandBlock(selector));
-const lastBrand = blocks.findLastIndex(({ selector }) => isBrandBlock(selector));
+// A block of declarations: every part of its selector is :root or a bare
+// attribute, such as [data-brand]. A switch's own block, such as
+// [data-density="compact"] or :lang(ar), is not one.
+const isBaseBlock = (selector) => scopesOf(selector).every((part) => part === ':root' || /^\[[\w-]+\]$/.test(part));
+const baseDeclarations = builtSemantics.filter(({ selector }) => isBaseBlock(selector));
+const pathOfCss = new Map([...layeredNames].map((path) => [cssName(path), path]));
+// What each token reads on :root, by CSS name.
+const readsOnRoot = new Map();
+for (const { selector, declarations } of blocks) {
+  if (!scopesOf(selector).includes(':root')) continue;
+  for (const { name, value } of declarations) readsOnRoot.set(name, [...value.matchAll(/var\(\s*(--[\w-]+)/g)].map(([, read]) => read));
+}
+const readsAll = (name, seen = new Set()) => {
+  if (seen.has(name)) return seen;
+  seen.add(name);
+  for (const read of readsOnRoot.get(name) ?? []) readsAll(read, seen);
+  return seen;
+};
+const attributeSwitches = switches.filter(({ declaredOn }) => declaredOn !== null);
+// The switches that may change a token or anything it reads, and the token
+// along the way that each one changes.
+const changedBy = (name) => attributeSwitches.flatMap((each) => {
+  const reached = [...readsAll(name)].map((read) => pathOfCss.get(read)).filter(Boolean).find(each.covers);
+  return reached ? [{ ...each, reached }] : [];
+});
+const declaredOn = new Map();
+for (const { name, selector } of baseDeclarations) {
+  declaredOn.set(name, new Set([...(declaredOn.get(name) ?? []), ...scopesOf(selector)]));
+}
+const declarationProblems = [...semanticCss].filter((name) => declaredOn.has(name)).flatMap((name) => {
+  const has = declaredOn.get(name);
+  const wants = changedBy(name);
+  const problems = [];
+  if (!has.has(':root')) problems.push(`${name} is not declared on :root, so a page that sets no switch has no value for it.`);
+  for (const { name: switchName, declaredOn: attribute, reached } of wants) {
+    if (has.has(attribute)) continue;
+    const why = cssName(reached) === name ? `a ${switchName} may change it` : `it reads ${reached}, which a ${switchName} may change`;
+    problems.push(`${name} is not declared on ${attribute}, and ${why} (${SCOPES}). Anything that reads it inside an element with ${attribute} would keep the value worked out outside it.`);
+  }
+  for (const part of has) {
+    if (part === ':root' || wants.some(({ declaredOn: attribute }) => attribute === part)) continue;
+    const owner = attributeSwitches.find(({ declaredOn: attribute }) => attribute === part);
+    problems.push(owner
+      ? `${name} is declared on ${part}, but a ${owner.name} may change neither it nor anything it reads (${SCOPES}). There it puts ${name} back to its value with no switch, undoing any other switch an ancestor set, such as a compact panel around a card that sets its own brand. Declare it on :root and the attributes of the switches that may change it only.`
+      : `${name} is declared on ${part}, which is not the attribute of any switch in ${SCOPES}. Declare it on :root and the attributes of the switches that may change it only.`);
+  }
+  return problems;
+});
 const lastBase = blocks.findLastIndex(({ selector, declarations }) =>
-  !isBrandBlock(selector) && !isLocaleBlock(selector) && declarations.some(({ name }) => semanticCss.has(name)));
-const baseDeclarations = builtSemantics.filter(({ selector }) => !isBrandBlock(selector) && !isLocaleBlock(selector));
-const localeBlockProblems = localeFiles
-  .filter((file) => locales.some((token) => token.file === file))
-  .flatMap((file) => {
-    const code = basename(file, '.json');
-    const at = blocks.findIndex(({ selector }) => scopesOf(selector).includes(`:lang(${code})`));
-    if (at === -1) {
-      return [`${file} has no :lang(${code}) block in dist/tokens.css. Build each locale as a :lang() block, so lang="${code}" reads it, and so does any lang that starts with ${code}-.`];
-    }
-    if (at < lastBrand) {
-      return [`The :lang(${code}) block from ${file} comes before a brand block. Put the locale blocks after the brands, so a brand's [data-brand] does not undo them on an element that sets both.`];
-    }
-    return [];
-  });
-check('Semantic and component tokens are declared on :root and [data-brand], before the brands, type tokens on [lang] as well, and each locale is a :lang() block after the brands', [
-  ...localeBlockProblems,
-  ...baseDeclarations
-    .filter(({ selector }) => !scopesOf(selector).includes('[data-brand]'))
-    .map(({ name, selector }) => `${name} is declared under "${selector}" only. Anything that reads it inside a data-brand would keep the page's value.`),
-  ...baseDeclarations
-    .filter(({ name, selector }) => typeCss.has(name) && !scopesOf(selector).includes('[lang]'))
-    .map(({ name, selector }) => `${name} is a type token declared under "${selector}" without [lang]. An element that sets a language inside an Arabic one, such as an English label, would keep the Arabic type. Declare the type tokens on ":root, [data-brand], [lang]".`),
-  ...baseDeclarations
-    .filter(({ name, selector }) => !typeCss.has(name) && scopesOf(selector).includes('[lang]'))
-    .map(({ name, selector }) => `${name} is declared under "${selector}", and only type tokens go on [lang]. Anything inside a brand that sets a language would get ${name} back at its value with no brand.`),
-  ...(firstBrand !== -1 && lastBase > firstBrand ? ['A brand block comes before the tokens it re-points, so they would undo it.'] : []),
-]);
+  isBaseBlock(selector) && declarations.some(({ name }) => semanticCss.has(name)));
+const switchBlockProblems = switches.filter(({ block }) => block !== null).flatMap((each) =>
+  each.options()
+    .filter((file) => tokensIn(file).length > 0)
+    .flatMap((file) => {
+      const wanted = each.blockFor(file);
+      const at = blocks.findIndex(({ selector }) => selector === wanted);
+      if (at === -1) {
+        return [`${file} has no ${wanted} block in dist/tokens.css. Build each file in ${each.folder} as ${each.block}, as ${SCOPES} says, so ${each.declaredOn ?? 'its switch'} picks it.`];
+      }
+      if (at < lastBase) {
+        return [`The ${wanted} block from ${file} comes before the declarations it re-points, so they would undo it. Put every switch's blocks after them.`];
+      }
+      return [];
+    }));
+check(`Semantic and component tokens are declared on :root and on the attribute of each switch ${SCOPES} lets change them or anything they read, and each switch file has its block after them`, [
+  ...switchBlockProblems,
+  ...declarationProblems,
+], { all: true });
 
 // 7. A semantic colour is named color.<role>.<intent>, with an optional -state
 //    at the end, and names a job, not a colour. The colour words are the ramps
@@ -481,28 +517,14 @@ check('No script, workflow, root config file or demo file names a brand', brandN
         : `${file}:${i + 1} names the brand ${name}. Brands are the files in tokens/brands/, so read them from there instead.`)),
   ));
 
-// 9. A mode file re-points colour semantics that exist, and nothing else. It
-//    holds no colour value, sets no primitive, so color.gray.900 is the same
-//    colour in every mode, and never touches the brand ramp: the brands set
-//    its steps, and a mode re-points the semantics that read them.
+// 9. A mode file holds no colour value: it points each colour semantic at a
+//    primitive or a step of the brand ramp, so the colours stay in one place.
+//    What it may re-point, the colour semantics but the steps of the ramp, is
+//    check 30's, from tokens/switch-scopes.json.
 const colourSemantics = semantics.filter(isColour).filter(({ path }) => !rampSteps.has(path));
-const colourSemanticNames = names(colourSemantics);
-check('Mode files only re-point colour semantics that exist', modes.flatMap(({ path, value, file }) => {
-  const problems = [];
-  if (typeof value === 'object' ? 'colorSpace' in value : COLOUR_LITERAL.test(String(value))) {
-    problems.push(`${file}: ${path} holds a colour value. Point it at a primitive instead.`);
-  }
-  if (primitiveNames.has(path)) {
-    problems.push(`${file}: ${path} is a primitive. A mode re-points semantics and leaves primitives alone, so ${path} is the same colour in every mode.`);
-  } else if (!semanticNames.has(path) && !componentNames.has(path)) {
-    problems.push(`${file}: ${path} is not a token. Did you mean ${closest(path, colourSemanticNames)}?`);
-  } else if (rampSteps.has(path)) {
-    problems.push(`${file}: ${path} is a step of the brand ramp, which only the brands set. Re-point the semantic that reads it instead, such as color.text.link.`);
-  } else if (!colourSemanticNames.has(path)) {
-    problems.push(`${file}: ${path} is not a colour semantic. A mode re-points colour semantics only.`);
-  }
-  return problems;
-}));
+check('Mode files hold no colour value', modes
+  .filter(({ value }) => (typeof value === 'object' ? 'colorSpace' in value : COLOUR_LITERAL.test(String(value))))
+  .map(({ path, file }) => `${file}: ${path} holds a colour value. Point it at a primitive instead.`));
 
 // 10. Every colour semantic has an answer in tokens/modes/dark.json, even where
 //     dark is the same as light, so a colour semantic added later cannot be
@@ -1084,11 +1106,10 @@ check('Every line height in the CSS reads a token, or is 1', declarations.flatMa
   return setAgain ? [] : [`${where} sets font: ${value}, which sets the line height back to normal. Add a line-height after it that reads ${lineHeightList}, or set font-size and font-family on their own.`];
 }).sort((a, b) => a.localeCompare(b, 'en', { numeric: true })), { all: true });
 
-// 21. A file in tokens/locales/ is named for a language, and sets only type
-//     tokens that exist. The name is the code :lang() is built with, so it
-//     must be one Intl.DisplayNames can name, such as ar or ar-EG. A locale
-//     changes how a language is set, its family, weights, sizes and line
-//     heights, and nothing else: colours and shapes belong to brands and modes.
+// 21. A file in tokens/locales/ is named for a language. The name is the code
+//     :lang() is built with, so it must be one Intl.DisplayNames can name,
+//     such as ar or ar-EG. What a locale may re-point, the type tokens, is
+//     check 30's, from tokens/switch-scopes.json.
 const languageNames = new Intl.DisplayNames(['en'], { type: 'language', fallback: 'none' });
 const languageName = (code) => {
   try {
@@ -1097,22 +1118,9 @@ const languageName = (code) => {
     return undefined;
   }
 };
-const typeNames = [...semanticNames].filter((path) => path.startsWith('type.'));
-check(`Each file in ${LOCALES} is named for a language and sets only type tokens that exist`, localeFiles.flatMap((file) => {
-  const code = basename(file, '.json');
-  const problems = [];
-  if (!languageName(code)) {
-    problems.push(`${file} is named "${code}", which Intl.DisplayNames does not know as a language. Name it by a language code, such as ar.json for Arabic or ar-EG.json for Arabic in Egypt: the name is the code in :lang().`);
-  }
-  for (const { path } of locales.filter((token) => token.file === file)) {
-    if (!path.startsWith('type.')) {
-      problems.push(`${file}: ${path} is not a type token. A locale re-points type tokens and nothing else: ${typeNames.join(', ')}.`);
-    } else if (!semanticNames.has(path)) {
-      problems.push(`${file}: ${path} is not a type token that exists. Did you mean ${closest(path, typeNames)}?`);
-    }
-  }
-  return problems;
-}), { all: true });
+check(`Each file in ${LOCALES} is named for a language`, localeFiles
+  .filter((file) => !languageName(basename(file, '.json')))
+  .map((file) => `${file} is named "${basename(file, '.json')}", which Intl.DisplayNames does not know as a language. Name it by a language code, such as ar.json for Arabic or ar-EG.json for Arabic in Egypt: the name is the code in :lang().`), { all: true });
 
 // 22. No CSS sets italics or capitals. Arabic has no capitals, and the Arabic
 //     family has no italic, so a browser would slant its letters on its own.
@@ -1320,7 +1328,7 @@ check('Every focus style keeps its outline, and none draws a ring with box-shado
 //     message names the token files that set the token, so the fix goes there.
 const BUILT = 'dist/tokens.css';
 const builtText = readFileSync(BUILT, 'utf8').replace(/\/\*[\s\S]*?\*\//g, blank);
-const everyToken = [...primitives, ...semantics, ...components, ...brandFolder, ...modes, ...locales];
+const everyToken = [...primitives, ...semantics, ...components, ...brandFolder, ...modes, ...locales, ...densities];
 const UNREADABLE = [
   { pattern: /\[object [A-Za-z]+\]/, what: 'an object the build wrote as text' },
   { pattern: /(?<![\w-])(?:undefined|null|NaN|-?Infinity)(?![\w-])/, what: 'a value that was missing, or not a number, when the build wrote it' },
@@ -1425,6 +1433,60 @@ const spaceRoleProblems = declarations.flatMap(({ file, line, property, value })
   });
 });
 check('Padding reads space.padding, and a gap or a margin reads space.gap', spaceRoleProblems.sort((a, b) => a.localeCompare(b, 'en', { numeric: true })), { all: true });
+
+// 30. Every switch file sets only tokens that exist and that its switch may
+//     change, by tokens/switch-scopes.json, the one list the build reads too:
+//     a brand what tokens/brands/_template.json lists, a mode the colour
+//     semantics but the steps of the brand ramp, a locale the type tokens, a
+//     density the padding and gap roles. The list itself names only semantic
+//     and component tokens that exist, no token is in two switches' lists,
+//     since two switches setting one token would undo each other on nested
+//     elements, every switch's folder exists, and every folder in tokens/ is a
+//     layer or a switch in the list. Each problem prints on its own line.
+const LAYERS = new Set(['primitives', 'semantics', 'components']);
+const listProblems = [...scopeProblems];
+const folders = existsSync('tokens')
+  ? readdirSync('tokens', { withFileTypes: true }).filter((entry) => entry.isDirectory()).map(({ name }) => join('tokens', name))
+  : [];
+for (const folder of folders) {
+  if (LAYERS.has(basename(folder)) || switches.some((each) => each.folder === folder)) continue;
+  listProblems.push(`${folder} is not a layer, and ${SCOPES} has no switch for it. Add one there, with what its files may change, or move the files into a layer.`);
+}
+for (const each of switches) {
+  if (!existsSync(each.folder)) listProblems.push(`${SCOPES}: ${each.name}'s folder, ${each.folder}, is missing.`);
+  for (const listed of each.mayChange) {
+    if ([...layeredNames].some((path) => path === listed || path.startsWith(`${listed}.`))) continue;
+    const what = [...primitiveNames].some((path) => path === listed || path.startsWith(`${listed}.`))
+      ? 'a primitive: a switch re-points semantic and component tokens and leaves primitives alone'
+      : `no semantic or component token. Did you mean ${closest(listed, layeredNames)}?`;
+    listProblems.push(`${each.source}: ${each.name} may change ${listed}, which names ${what}`);
+  }
+}
+for (const path of layeredNames) {
+  const owners = switches.filter(({ covers }) => covers(path));
+  if (owners.length > 1) {
+    listProblems.push(`${path} is in the lists of ${owners.map(({ name }) => name).join(' and ')}. A token is in one switch's list at most: on an element inside another that set the other switch, the nearer one would put the token back to its own answer. Keep it in one list in ${SCOPES}.`);
+  }
+}
+const switchFileProblems = switches.flatMap((each) => each.options().flatMap((file) => tokensIn(file).flatMap(({ path }) => {
+  const allowed = [...layeredNames].filter(each.covers);
+  if (primitiveNames.has(path)) {
+    return [`${file}: ${path} is a primitive. A ${each.name} re-points semantic and component tokens and leaves primitives alone, so ${path} is the same everywhere.`];
+  }
+  if (!layeredNames.has(path)) {
+    return [`${file}: ${path} is not a token that exists. Did you mean ${closest(path, allowed.length > 0 ? allowed : layeredNames)}?`];
+  }
+  if (each.covers(path)) return [];
+  const owner = switches.find(({ covers }) => covers(path));
+  const whose = owner
+    ? ` It is the ${owner.name}'s to change, in ${owner.folder}.`
+    : ' No switch may change it.';
+  const where = each.source === SCOPES
+    ? `${SCOPES} lets a ${each.name} change ${each.mayChange.join(', ')}`
+    : `${each.source} lists everything a ${each.name} may change, as ${SCOPES} says`;
+  return [`${file}: ${path} is not something a ${each.name} may change: ${where}.${whose} Take it out, or, if every ${each.name} should be able to change it, add it to ${each.source} first.`];
+})));
+check(`Every switch file sets only what ${SCOPES} lets its switch change`, [...listProblems, ...switchFileProblems], { all: true });
 
 if (failed > 0) {
   console.log(`\n${failed} check${failed === 1 ? '' : 's'} failed.`);

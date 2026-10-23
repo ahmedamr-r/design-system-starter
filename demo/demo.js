@@ -9,13 +9,15 @@
 //   3. a card of the next brand in the list inside a light panel of each brand,
 //      and 4. the same inside a dark panel (the last brand holds the first);
 //   5. a dark panel with no brand inside a light panel of each brand;
-//   6. a card of each brand inside a light panel inside a dark one.
+//   6. a card of each brand inside a light panel inside a dark one;
+//   7. a card of the next brand in the list inside a compact light panel of
+//      each brand, with data-density="compact", which must stay compact.
 //
-// Then the status panels, from the second <template>: 7. no brand, then each
+// Then the status panels, from the second <template>: 8. no brand, then each
 // brand, in light and in dark, each with a badge and a notice for every status.
 // A brand never re-points a status, so they come out the same in every brand.
 //
-// Last the states panels: 8. the card's main button at rest, under the
+// Last the states panels: 9. the card's main button at rest, under the
 // pointer, pressed, focused and disabled, side by side, for no brand and each brand, in
 // light and in dark. The names of the states are the demo's own labels, like
 // the panel labels, so they stay in the page's language.
@@ -117,17 +119,18 @@ const languages = copy === undefined ? [] : [
 });
 const inOtherLanguage = (language) => language !== pageLanguage;
 
-// A panel: a section named by its heading, with data-brand and data-mode when
-// given. level is the heading's level: 2 for a panel on the page, 3 for one
-// inside another. A panel in another language sets its lang and dir, its
-// label keeps the page's, and a panel on the page names its language in the
-// label. A wide panel takes the whole width of the page.
+// A panel: a section named by its heading, with data-brand, data-mode and
+// data-density when given. level is the heading's level: 2 for a panel on the
+// page, 3 for one inside another. A panel in another language sets its lang
+// and dir, its label keeps the page's, and a panel on the page names its
+// language in the label. A wide panel takes the whole width of the page.
 let headings = 0;
-function panel({ label, brand, mode, language, level = 2, wide = false }, ...children) {
+function panel({ label, brand, mode, density, language, level = 2, wide = false }, ...children) {
   const section = document.createElement('section');
   section.className = wide ? 'panel wide' : 'panel';
   if (brand) section.dataset.brand = brand.id;
   if (mode) section.dataset.mode = mode;
+  if (density) section.dataset.density = density;
   const heading = document.createElement(`h${level}`);
   heading.className = 'panel-label';
   heading.id = `panel-label-${++headings}`;
@@ -302,7 +305,21 @@ for (const brand of brands) {
   ));
 }
 
-// 7. The status panels: no brand, then each brand, in light and in dark, from
+// 7. Density: a card of the next brand inside a compact light panel of each
+// brand. The panel and the card inside it must both come out compact, with
+// every padding and gap one step down from the panels above, and the card in
+// the next brand's colours: a brand never changes spacing, so the card's own
+// data-brand does not put it back. The word compact is the demo's own label,
+// like the rest of the panel's, so it stays in the page's language.
+for (const [i, outer] of brands.entries()) {
+  const inner = next(i);
+  cases.push((language) => panel(
+    { label: `${inner.displayName} inside compact ${outer.displayName}`, brand: outer, mode: 'light', density: 'compact', language },
+    card({ brand: inner, language }),
+  ));
+}
+
+// 8. The status panels: no brand, then each brand, in light and in dark, from
 // the same list of brands as the panels above.
 for (const brand of [undefined, ...brands]) {
   for (const mode of modes) {
@@ -313,7 +330,7 @@ for (const brand of [undefined, ...brands]) {
   }
 }
 
-// 8. The states panels: the main button at rest, under the pointer, pressed,
+// 9. The states panels: the main button at rest, under the pointer, pressed,
 // focused and disabled, for no brand, then each brand, in light and in dark.
 for (const brand of [undefined, ...brands]) {
   for (const mode of modes) {
