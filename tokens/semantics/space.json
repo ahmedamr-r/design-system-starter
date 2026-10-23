@@ -1,9 +1,18 @@
 {
   "space": {
     "$type": "dimension",
-    "control-x": { "$value": "{size.400}", "$description": "Padding at the start and end of buttons and inputs, the sides their text begins and ends on." },
-    "control-y": { "$value": "{size.200}", "$description": "Top and bottom padding inside buttons and inputs." },
-    "surface": { "$value": "{size.600}", "$description": "Padding inside cards and panels." },
-    "stack": { "$value": "{size.300}", "$description": "Gap between stacked items inside a card." }
+    "$description": "Spacing does two jobs, so it has two kinds, each in small, medium and large. Padding is room inside something, between its edge and what it holds. Gap is room between things, read by gap and by margin. Padding never reads a gap, and a gap or a margin never reads a padding.",
+    "padding": {
+      "$description": "Room inside something, between its edge and what it holds.",
+      "small": { "$value": "{size.200}", "$description": "Inside small things: all round a tag, and the top and bottom of buttons, badges and notices." },
+      "medium": { "$value": "{size.400}", "$description": "Inside buttons and notices at the start and end, the sides their text begins and ends on, and above a list under a rule." },
+      "large": { "$value": "{size.600}", "$description": "Inside cards and panels." }
+    },
+    "gap": {
+      "$description": "Room between things, read by gap and by margin.",
+      "small": { "$value": "{size.200}", "$description": "Between things that belong together: a label and its arrow, the items of a list, a state's name and its button." },
+      "medium": { "$value": "{size.300}", "$description": "Between the stacked parts of a card or a panel, and between a tick and its words." },
+      "large": { "$value": "{size.600}", "$description": "Between cards, panels and the states side by side." }
+    }
   }
 }

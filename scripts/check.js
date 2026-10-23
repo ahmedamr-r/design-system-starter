@@ -12,8 +12,9 @@
 // demo's HTML for a price typed in the price slot, then that demo/copy.json
 // still holds a language that reads right to left, then that every focus
 // style in the CSS keeps its outline and draws no box-shadow, then that every
-// value in dist/tokens.css is one CSS can read, and at the very end that every
-// type role has its four parts. Check 12, that the CSS reads only variables
+// value in dist/tokens.css is one CSS can read, then that every type role has
+// its four parts, and at the very end that padding in the CSS reads a padding
+// role and a gap or a margin a gap role. Check 12, that the CSS reads only variables
 // the build writes, reads the same CSS as the side checks: every CSS file and
 // the CSS in every HTML file. It prints one line per check, and exits with an
 // error if any fail.
@@ -1373,6 +1374,57 @@ const roleProblems = jsonFiles(join('tokens', 'semantics')).flatMap((file) => {
     });
 });
 check('Every type role has its own size, weight, line-height and letter-spacing', roleProblems, { all: true });
+
+// 29. Padding reads a padding role, and a gap or a margin reads a gap role.
+//     Spacing does two jobs, so tokens/semantics/space.json has two kinds:
+//     space.padding, room inside something, and space.gap, room between
+//     things. Padding is padding and scroll-padding, with any side; a gap is
+//     gap, row-gap and column-gap, and their grid- names; a margin is margin
+//     and scroll-margin, with any side. Every var() in the value counts, inside
+//     calc() too, and so does a semantic or component token that points at a
+//     space role, followed down to the role it reaches. It reads the same CSS
+//     as check 18. Each problem names the role of the same size in the right
+//     kind, when there is one.
+const SPACE_KIND = /^space\.(padding|gap)\.[^.]+$/;
+const pointsAt = new Map([...semantics, ...components].map(({ path, value }) => [cssName(path), referenceIn(value)]));
+// The space role a variable reaches, as a token path, or undefined.
+const spaceRoleOf = (name) => {
+  let path = [...layeredNames].find((candidate) => cssName(candidate) === name);
+  const seen = new Set();
+  while (path && !seen.has(path)) {
+    if (SPACE_KIND.test(path)) return path;
+    seen.add(path);
+    path = pointsAt.get(cssName(path));
+  }
+  return undefined;
+};
+const kindOfProperty = (property) => {
+  if (/^(?:scroll-)?padding(?:-[\w-]+)?$/.test(property)) return 'padding';
+  if (/^(?:grid-)?(?:row-|column-)?gap$/.test(property)) return 'gap';
+  if (/^(?:scroll-)?margin(?:-[\w-]+)?$/.test(property)) return 'margin';
+  return undefined;
+};
+const spaceRoleProblems = declarations.flatMap(({ file, line, property, value }) => {
+  const kind = kindOfProperty(property);
+  if (!kind) return [];
+  const wants = kind === 'padding' ? 'padding' : 'gap';
+  return [...value.matchAll(/var\(\s*(--[\w-]+)/g)].flatMap(({ 1: name }) => {
+    const role = spaceRoleOf(name);
+    if (!role) return [];
+    const [, has, size] = role.split('.');
+    if (has === wants) return [];
+    const swap = `space.${wants}.${size}`;
+    const instead = semanticNames.has(swap)
+      ? `Read var(${cssName(swap)}) instead.`
+      : `There is no ${swap}: pick a ${wants} size that fits, or ask, rather than adding one.`;
+    const via = cssName(role) === name ? ',' : `, which points at ${role},`;
+    const job = kind === 'padding'
+      ? 'Padding is room inside something, so it reads space.padding.'
+      : `A ${kind} is room between things, so it reads space.gap.`;
+    return [`${file}:${line} sets ${property}: ${value} with ${name}${via} a ${has} role. ${job} ${instead}`];
+  });
+});
+check('Padding reads space.padding, and a gap or a margin reads space.gap', spaceRoleProblems.sort((a, b) => a.localeCompare(b, 'en', { numeric: true })), { all: true });
 
 if (failed > 0) {
   console.log(`\n${failed} check${failed === 1 ? '' : 's'} failed.`);

@@ -41,13 +41,13 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   align-items: start;
-  gap: var(--space-surface);
-  padding: var(--space-surface);
+  gap: var(--space-gap-large);
+  padding: var(--space-padding-large);
 }
 
 .panel {
   display: grid;
-  gap: var(--space-stack);
+  gap: var(--space-gap-medium);
 }
 
 /* An element that sets a mode paints its own background and text colour, and
@@ -59,7 +59,7 @@ body {
 }
 
 .panel[data-mode] {
-  padding: var(--space-surface);
+  padding: var(--space-padding-large);
   border-radius: var(--radius-surface);
 }
 
@@ -75,8 +75,8 @@ body {
 /* Comes after [data-mode], so a card that sets a mode keeps the card surface. */
 .card {
   display: grid;
-  gap: var(--space-stack);
-  padding: var(--space-surface);
+  gap: var(--space-gap-medium);
+  padding: var(--space-padding-large);
   background: var(--color-surface-default);
   color: var(--color-text-default);
   border: 1px solid var(--color-border-default);
@@ -87,7 +87,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-stack);
+  gap: var(--space-gap-medium);
 }
 
 .plan {
@@ -98,8 +98,10 @@ body {
   letter-spacing: var(--type-title-letter-spacing);
 }
 
+/* Small padding all round. Its start and end were 12px, which fits no padding
+   size, so they come in to 8px, the same as its top and bottom. */
 .tag {
-  padding: var(--space-control-y) var(--space-stack);
+  padding: var(--space-padding-small);
   background: var(--color-fill-brand-subtle);
   color: var(--color-text-brand);
   border-radius: var(--radius-control);
@@ -119,7 +121,7 @@ body {
 }
 
 .price {
-  margin: var(--space-control-y) 0 0;
+  margin: var(--space-gap-small) 0 0;
   color: var(--color-text-subtle);
   font-size: var(--type-body-size);
   font-weight: var(--type-body-weight);
@@ -138,9 +140,9 @@ body {
 
 .features {
   display: grid;
-  gap: var(--space-control-y);
-  margin: var(--space-control-y) 0 0;
-  padding: var(--space-control-x) 0 0;
+  gap: var(--space-gap-small);
+  margin: var(--space-gap-small) 0 0;
+  padding: var(--space-padding-medium) 0 0;
   border-top: 1px solid var(--color-border-default);
   list-style: none;
   font-size: var(--type-body-size);
@@ -152,10 +154,11 @@ body {
 .features li {
   display: flex;
   align-items: center;
-  gap: var(--space-stack);
+  gap: var(--space-gap-medium);
 }
 
-/* The tick sits on a tinted disc, the same pair of tokens as the tag. */
+/* The tick sits on a tinted disc, the same pair of tokens as the tag. Its 4px
+   padding inside the disc fits no padding size and stays as it is for now. */
 .tick {
   flex-shrink: 0;
   width: 12px;
@@ -176,9 +179,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-control-y);
-  margin-top: var(--space-control-y);
-  padding: var(--space-control-y) var(--space-control-x);
+  gap: var(--space-gap-small);
+  margin-top: var(--space-gap-small);
+  padding: var(--space-padding-small) var(--space-padding-medium);
   border: 0;
   border-radius: var(--button-radius);
   background: var(--button-background);
@@ -279,7 +282,7 @@ body {
 .states {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-surface);
+  gap: var(--space-gap-large);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -288,7 +291,7 @@ body {
 .state {
   display: grid;
   justify-items: start;
-  gap: var(--space-control-y);
+  gap: var(--space-gap-small);
 }
 
 .state > .button {
@@ -310,11 +313,14 @@ body {
 .status {
   display: grid;
   justify-items: start;
-  gap: var(--space-control-y);
+  gap: var(--space-gap-small);
 }
 
+/* The 12px at the start and end fits no padding size, small 8px, medium 16px
+   or large 24px, so it stays 12px until the designer picks one. */
 .badge {
-  padding: var(--space-control-y) var(--space-stack);
+  padding-block: var(--space-padding-small);
+  padding-inline: 12px;
   border-radius: var(--radius-pill);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
@@ -325,7 +331,7 @@ body {
 .notice {
   justify-self: stretch;
   margin: 0;
-  padding: var(--space-control-y) var(--space-control-x);
+  padding: var(--space-padding-small) var(--space-padding-medium);
   border: 1px solid;
   border-radius: var(--radius-control);
   font-size: var(--type-body-size);
